@@ -52,6 +52,7 @@ TO DO LIST:
 //#define DEBUG_INITIAL_LEVEL DEBUG_LEVEL_VERBOSE   
 
 #include "Arduino.h"
+#include "Inverter.h"
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 #include <Wire.h>
 #include <RTC.h>
@@ -62,7 +63,7 @@ TO DO LIST:
 
 /// RTC
 static DS1307 RTC;
-
+static INVERTER inv;
 
 /// Comandos do inversor
 String QPIGS = "\x51\x50\x49\x47\x53\xB7\xA9\x0D";
@@ -149,24 +150,27 @@ void setup() {
 void loop()
 {
   // stemp for testing pourposes only, it will be remeved later
-  String stemp = "";
+  //String stemp = "";
 
   //--- SERIAL DEBUGGER Handle ---------------
-  debugHandle();
+  //debugHandle();
 
   //--- For benchmarking the Solar inverter communication ---------------
   oldtime=millis();
 
   //--- Ask the Solar inverter for information ---------------
   //TO DO: function "askInverter": Test the feedback string before returning the response string
-  stemp = askInverter(QPIGS);
+  //stemp = askInverter(QPIGS);
+
+  inv.invereter_receive( inv.QPIGS);
   
   // Split the feedback string into meaningfull variables and generate debug (verbose ON) info on serial monitor
-  handleQPIGSfeedback(stemp);
+  //handleQPIGSfeedback(stemp);
 
 
   Serial.print(millis() - oldtime);
   Serial.println(" milisegundos");
+  Serial.println(inv.pipVals.gridFrequency);
   
 }
 
