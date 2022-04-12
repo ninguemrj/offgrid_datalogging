@@ -1,4 +1,5 @@
 #include "inverter.h"
+#include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 
 
 void INVERTER::store_val(String cmd)
@@ -20,14 +21,12 @@ void INVERTER::store_val(String cmd)
     pipVals.gridVoltage = 0;
     }
 
-  val = strtok(0, " "); // Get the next value
-  pipVals.gridFrequency = atof(val) * 10 ;
+  pipVals.gridFrequency = strtok(0, " "); // Get the next value
 
   val = strtok(0, " "); // Get the next value
   pipVals.acOutput = atoi(val);
 
-  val = strtok(0, " "); // Get the next value
-  pipVals.acFrequency = atof(val) * 10;
+  pipVals.acFrequency = strtok(0, " "); // Get the next value
 
   val = strtok(0, " "); // Get the next value
   pipVals.acApparentPower = atoi(val);
@@ -42,7 +41,7 @@ void INVERTER::store_val(String cmd)
   pipVals.busVoltage = atoi(val);
 
   val = strtok(0, " "); // Get the next value
-  pipVals.batteryVoltage = atof(val)*100;
+  pipVals.batteryVoltage = atof(val);
 
   val = strtok(0, " "); // Get the next value
   pipVals.batteryChargeCurrent = atoi(val);
@@ -54,7 +53,7 @@ void INVERTER::store_val(String cmd)
   pipVals.inverterTemperature = atoi(val);
 
   val = strtok(0, " "); // Get the next value
-  pipVals.PVCurrent = atoi(val);
+  pipVals.PVCurrent = atof(val);
 
   val = strtok(0, " "); // Get the next value
   pipVals.PVVoltage = atoi(val);
@@ -62,7 +61,7 @@ void INVERTER::store_val(String cmd)
   pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
 
   val = strtok(0, " "); // Get the next value
-  pipVals.batterySCC = atof(val)*100;
+  pipVals.batterySCC = atof(val);
 
   val = strtok(0, " "); // Get the next value
   pipVals.batteryDischargeCurrent = atoi(val);
@@ -105,12 +104,12 @@ void INVERTER::store_status ()
 
 void INVERTER::store_status2 ()
 {
-  char val[8];
+  char val[3];
   strcpy(pipVals.deviceStatus, val);		// get the first value
 
   DevStatus2.changingFloatMode			 = val[0] ;		// 10: flag for charging to floating mode
-  DevStatus2.SwitchOn				 = val[1] ;		// b9: Switch On
-  DevStatus2.dustProof				     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
+  DevStatus2.SwitchOn       				 = val[1] ;		// b9: Switch On
+  DevStatus2.dustProof			  	     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
 }
 
 void INVERTER::inverter_console_data(String cmd)
@@ -118,50 +117,30 @@ void INVERTER::inverter_console_data(String cmd)
   if (cmd==QPIGS)
   {
   // Print out readings
-  Serial.print("grid Voltage:......... ");
-  Serial.print(pipVals.gridVoltage); Serial.println(" V");
-  Serial.print("grid Frequency:....... ");
-  Serial.print(pipVals.gridFrequency/10.0,1); Serial.println(" Hz");
-  Serial.print("AC Output:............ ");
-  Serial.print(pipVals.acOutput); Serial.println(" V");
-  Serial.print("AC Frequency:......... ");
-  Serial.print(pipVals.acFrequency/10.0,1); Serial.println(" Hz");
-  Serial.print("AC ApparentPower:..... ");
-  Serial.print(pipVals.acApparentPower); Serial.println(" VA");
-  Serial.print("AC ActivePower:....... ");
-  Serial.print(pipVals.acActivePower); Serial.println(" W");
-  Serial.print("load Percent:......... ");
-  Serial.print(pipVals.loadPercent); Serial.println(" %");
-  Serial.print("bus Voltage:.......... ");
-  Serial.print(pipVals.busVoltage/100.00,2); Serial.println(" V"); 
-  Serial.print("battery Voltage:...... ");
-  Serial.print(pipVals.batteryVoltage/100.00,2); Serial.println(" V");
-  Serial.print("battery ChargeCurrent: ");
-  Serial.print(pipVals.batteryChargeCurrent); Serial.println(" A");
-  Serial.print("battery Charge:....... ");
-  Serial.print(pipVals.batteryCharge); Serial.println(" %");
-  Serial.print("inverter Temperature:. ");
-  Serial.print(pipVals.inverterTemperature/10.0); Serial.println(" C");
-  Serial.print("PV Current:........... ");
-  Serial.print(pipVals.PVCurrent); Serial.println(" A");
-  Serial.print("PV Voltage:........... ");
-  Serial.print(pipVals.PVVoltage); Serial.println(" V");
-  Serial.print("PV Power:............. ");
-  Serial.print(pipVals.PVPower);  Serial.println(" W");
-  Serial.print("battery SCC:.......... ");
-  Serial.print(pipVals.batterySCC/100.00,2); Serial.println(" V");
-  Serial.print("battery DischargeCurrent: ");
-  Serial.print(pipVals.batteryDischargeCurrent); Serial.println(" A");
-  Serial.print("DeviceStatus:......... ");
-  Serial.println(String(pipVals.deviceStatus));
-  Serial.print("Battery offset Fan:... ");
-  Serial.println(String(pipVals.batOffsetFan));
-  Serial.print("EEPROM Version:....... ");
-  Serial.println(String(pipVals.eepromVers));
-  Serial.print("PV1 Charger Power:.... ");
-  Serial.println(String(pipVals.PV1_chargPower));
-  Serial.print("DeviceStatus2:........ ");
-  Serial.println(String(pipVals.deviceStatus2));
+
+  
+  debugV("grid Voltage:......... |%d| V"   , pipVals.gridVoltage);
+  debugV("grid Frequency:....... |%s| Hz"  , pipVals.gridFrequency.c_str());
+  debugV("AC Output:............ |%d| V"   , pipVals.acOutput);
+  debugV("AC Frequency:......... |%s| Hz"  , pipVals.acFrequency.c_str());
+  debugV("AC ApparentPower:..... |%d| VA"  , pipVals.acApparentPower);
+  debugV("AC ActivePower:....... |%d| W"   , pipVals.acActivePower);
+  debugV("load Percent:......... |%d| %"   , pipVals.loadPercent);
+  debugV("bus Voltage:.......... |%d| V"   , pipVals.busVoltage); 
+  debugV("battery Voltage:...... |%s| V"   , String(pipVals.batteryVoltage).c_str());
+  debugV("battery ChargeCurrent: |%d| A"   , pipVals.batteryChargeCurrent); 
+  debugV("battery Charge:....... |%d| %"   , pipVals.batteryCharge); 
+  debugV("inverter Temperature:. |%d| C"   , pipVals.inverterTemperature); 
+  debugV("PV Current:........... |%s| A"   , String(pipVals.PVCurrent).c_str());
+  debugV("PV Voltage:........... |%d| V"   , pipVals.PVVoltage); 
+  debugV("PV Power:............. |%d| W"   , pipVals.PVPower);  
+  debugV("Battery SCC:.......... |%d| V"   , pipVals.batterySCC);
+  debugV("Batt DischargeCurrent: |%d| A"   , pipVals.batteryDischargeCurrent); 
+  debugV("DeviceStatus:......... |%s|"     , pipVals.deviceStatus);
+  debugV("Battery offset Fan:... |%d| V"   , pipVals.batOffsetFan);
+  debugV("EEPROM Version:....... |%d|"     , pipVals.eepromVers);
+  debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
+  debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
   }
 }
 /*
@@ -253,11 +232,11 @@ uint16_t INVERTER::calc_crc(char *msg, int n)
 
 // ******************************************  inverter communication  *********************************
 
-String INVERTER::inverter_send(String inv_command)
+int INVERTER::inverter_send(String inv_command)
 {
-	Serial3.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
+	Serial3.print(QPIGS+"\r");  //  QPIGS without CRC just for knock-knock for communiction exist
 	Serial3.flush();          // Wait finishing transmitting before going on...
-	if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
+	if (Serial3.readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
 	{
 		uint16_t vgCrcCheck;
 		int vRequestLen = 0;
@@ -290,49 +269,32 @@ String INVERTER::inverter_send(String inv_command)
    }
    else
    {
-		return "-1";
+		return -1; // No serial communication
    }
-   return "";
+   return 0; // NAKss returned, serial communication up and running
 }
 
-void INVERTER::invereter_receive( String cmd )
+int INVERTER::invereter_receive( String cmd )
 {
-  if ( inverter_send(cmd)!="-1" )
+  if ( inverter_send(cmd)==0 )
     {
-/*    if (!LCDbase)
-      {
-      
-      inverter_LCD_base(cmd);
-      }
-    if (nocommunication) 
-      {
-      nocommunication=false;
-      }
- */ 
     // Serial.println("read data from inverter");
      inverterData = Serial3.readStringUntil('\x0D');
+
+    // TEST for NAK
+    // TEST for string lengh
+    // TEST for CRC receipt match with calculated CRC
+    // Different error hangling codes for each one
   
-    Serial.println (inverterData.substring(0,inverterData.length()-2));
+    debugV("Inverter anwser: |%s|", inverterData.substring(0,inverterData.length()-2));
     store_val(cmd);                // split inverter answer and store in pipVals
     inverter_console_data(cmd);     // print pipVals on serial port
-//    inverter_LCD_data(cmd);    // print (some) pipVals in LCD                
     inverterData = "";             // empty string received by inverter
+    return 0;
     }
   else
     {
-	  
-	  Serial.println("No Inverter...");
-/*    if (!nocommunication)
-      {
-      lcdclear();
-      lcdsetCursor(4,0);
-      lcdprint("No inverter");
-      lcdsetCursor(3,1);
-      lcdprint("communnication");
-      nocommunication=true;
-      LCDbase=false;
-      delay(1000);
-*/
+ 	  return -1;
 	  }
     
 }

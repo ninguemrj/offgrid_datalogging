@@ -55,27 +55,27 @@ class INVERTER
     // Structure to store the data for QPIGS
     struct pipVals_t {
       uint32_t gridVoltage;             // xxx V
-      uint32_t gridFrequency;           // xx.xx Hz  *100
+      String gridFrequency;              // xx.xx Hz  
       uint32_t acOutput;                // xxx V
-      uint32_t acFrequency;             // xx.xx Hz  *100
+      String acFrequency;                // xx.xx Hz
       uint32_t acApparentPower;         // xxxx VA
       uint32_t acActivePower;           // xxxx W
       uint32_t loadPercent;             // xxx %
-      uint64_t busVoltage;              // xxxx V    *100
-      uint32_t batteryVoltage;          // xx.xx V   *100
+      uint32_t busVoltage;              // xxxx V
+      float batteryVoltage;             // xx.xx V
       uint32_t batteryChargeCurrent;    // xxx A
       uint32_t batteryCharge;           // %
-      uint32_t inverterTemperature;     // xxxx      /100
-      uint32_t PVCurrent;               // xx A
+      uint32_t inverterTemperature;     // xxxx
+      float PVCurrent;                  // xx.x A
       uint32_t PVVoltage;               // xx V
       uint32_t PVPower;                 // xxxx W
-      uint32_t batterySCC;              // xx.xx V   *100
+      float batterySCC;                 // xx.xx V
       uint32_t batteryDischargeCurrent; // xxxx A
       char deviceStatus[8];             // 8 bit binary
       uint32_t batOffsetFan;            // Battery voltage offset for fans on  (2 numbers)
       uint32_t eepromVers;              // EEPROM version (2 numbers)
       uint32_t PV1_chargPower;          // PV1 Charging power (5 numbers)
-      char deviceStatus2[4];            // Devide status 2
+      char deviceStatus2[3];            // Devide status 2
 
     } pipVals;
 
@@ -167,7 +167,7 @@ class INVERTER
 		
 		
 		
-		void invereter_receive( String cmd = "" );
+		int invereter_receive( String cmd = "" );
 
 
 	private:
@@ -179,8 +179,6 @@ class INVERTER
     void store_status();
     void store_status2();
 		void inverter_console_data(String cmd = "" );
-		void inverter_LCD_data( String cmd = "" );
-		void inverter_LCD_base( String cmd = "" );
 
 
 
@@ -188,7 +186,7 @@ class INVERTER
 		uint16_t crc_xmodem_update (uint16_t crc, uint8_t data);
 		uint16_t calc_crc(char *msg, int n);
 		// ******************************************  inverter communication  *********************************
-		String inverter_send ( String inv_command );
+		int inverter_send ( String inv_command );
 };
 
 #endif 
