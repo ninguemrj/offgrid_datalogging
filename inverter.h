@@ -9,6 +9,8 @@
 class INVERTER
 {
 	public:
+
+    String POP_status;
 		String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
 		String ACK = "\x41\x43\x4B";               // this message receiving on acknovledge of command
 
@@ -20,7 +22,7 @@ class INVERTER
 		String QVFW2    = "\x51\x56\x46\x57\x32";              // Another CPU Firmware version inquiry      page 2
 		String QPIRI    = "\x51\x50\x49\x52\x49";              // Device Rating Information inquiry         page 2
 		String QFLAG    = "\x51\x46\x4C\x41\x47";              // Device flag status inquiry                page 4
-		String QPIGS    = "\x51\x50\x49\x47\x53";              // Device general status parameters inquiry  page 4
+		String QPIGS    = "\x51\x50\x49\x47\x53\xB7\xA9";       // CRC included       // Device general status parameters inquiry  page 4
 		String QMOD     = "\x51\x4D\x4F\x44";                  // Device Mode inquiry                                           page 6
 		String QPIWS    = "\x51\x50\x49\x57\x53";              // Device Warning Status inquiry                                 page 6
 		String QDI      = "\x51\x44\x49";                      // The default setting value information                         page 7
@@ -37,7 +39,8 @@ class INVERTER
 		String PE     = "\x50\x45";                 // setting some status enable                            pg 13
 		String PF     = "\x50\x46";                 // Setting control parameter to default value            pg 14
 		String F      = "\x46";                     //  F<nn><cr>: Setting device output rating frequency    pg 15
-		String POP    = "\x50\x4F\x50";             // POP<NN><cr>: Setting device output source priority    pg 15
+    String POP01  = "\x50\x4F\x50\x30\x31\xD2\x69"; // CRC included    // POP01 Setting device output source priority: SolarUtilityBat
+    String POP02  = "\x50\x4F\x50\x30\x32\xE2\x0B"; // CRC included    // POP02 Setting device output source priority: SolarBatUtility  
 		String PBCV   = "\x50\x42\x43\x56";         // PBCV<nn.n><cr>: Set battery re-charge voltage         pg 16
 		String PBDV   = "\x50\x42\x44\x56";         // PBDV<nn.n><cr>: Set battery re-discharge voltage      pg 16
 		String PCP    = "\x50\x43\x50";             // PCP<NN><cr>: Setting device charger priority          pg 16
@@ -54,10 +57,10 @@ class INVERTER
 		String PPCP   = "\x50\x50\x43\x50";         // <MNN><cr>: Setting parallel device charger priority (For 4K/5K)  pg 18
     // Structure to store the data for QPIGS
     struct pipVals_t {
-      uint32_t gridVoltage;             // xxx V
-      String gridFrequency;              // xx.xx Hz  
-      uint32_t acOutput;                // xxx V
-      String acFrequency;                // xx.xx Hz
+      float gridVoltage;                // xxx.x V
+      String gridFrequency;             // xx.xx Hz  
+      float acOutput;                   // xxx.x V
+      String acFrequency;               // xx.xx Hz
       uint32_t acApparentPower;         // xxxx VA
       uint32_t acActivePower;           // xxxx W
       uint32_t loadPercent;             // xxx %
@@ -75,7 +78,7 @@ class INVERTER
       uint32_t batOffsetFan;            // Battery voltage offset for fans on  (2 numbers)
       uint32_t eepromVers;              // EEPROM version (2 numbers)
       uint32_t PV1_chargPower;          // PV1 Charging power (5 numbers)
-      char deviceStatus2[3];            // Devide status 2
+      char deviceStatus2[4];            // Devide status 2
 
     } pipVals;
 
@@ -165,28 +168,27 @@ class INVERTER
       char id[16];
     };
 		
-		
-		
-		int invereter_receive( String cmd = "" );
-
+    void begin();
+    int handle_inverter_automation(int _hour, int _min);
+    int ask_inverter_data();
 
 	private:
 		String inverterData;
 		byte incomingdata;
 
 
-		void store_val( String cmd = "" );
+		void store_QPIGS(String value);
     void store_status();
     void store_status2();
-		void inverter_console_data(String cmd = "" );
-
-
+		void inverter_console_data();
+    int inverter_receive( String cmd, String& str_return );
+    int inverter_send ( String inv_command );
 
 		// ******************************************  CRC Functions  ******************************************
 		uint16_t crc_xmodem_update (uint16_t crc, uint8_t data);
 		uint16_t calc_crc(char *msg, int n);
 		// ******************************************  inverter communication  *********************************
-		int inverter_send ( String inv_command );
+		
 };
 
 #endif 

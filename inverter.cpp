@@ -1,97 +1,129 @@
 #include "inverter.h"
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 
-
-void INVERTER::store_val(String cmd)
+void INVERTER::begin()
 {
-  char pipInputBuf[500];
-  char *val;
-  
-  strcpy(pipInputBuf, inverterData.c_str());
-  // Now split the packet into the values
-   if ( cmd == QPIGS )
+  POP_status = "";
+}
+
+void INVERTER::store_QPIGS(String value)
+{
+  if (value == "")
   {
-  val = strtok((char *) pipInputBuf, " "); // get the first value
-  if (atoi(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
-    {
-    pipVals.gridVoltage = atoi(val + 1);  // Skip the initial '('
-    }
-    else
-    {
-    pipVals.gridVoltage = 0;
-    }
-
-  pipVals.gridFrequency = strtok(0, " "); // Get the next value
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.acOutput = atoi(val);
-
-  pipVals.acFrequency = strtok(0, " "); // Get the next value
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.acApparentPower = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.acActivePower = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.loadPercent = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.busVoltage = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batteryVoltage = atof(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batteryChargeCurrent = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batteryCharge = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.inverterTemperature = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.PVCurrent = atof(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.PVVoltage = atoi(val);
-
-  pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batterySCC = atof(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batteryDischargeCurrent = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  strcpy(pipVals.deviceStatus, val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.batOffsetFan = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.eepromVers = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  pipVals.PV1_chargPower = atoi(val);
-
-  val = strtok(0, " "); // Get the next value
-  strcpy(pipVals.deviceStatus2, val);
+    // Update status without data from inverter    
+    pipVals.gridVoltage = 0.0f;  
+    pipVals.gridFrequency = "";
+    pipVals.acOutput = 0.0f;
+    pipVals.acFrequency = "";
+    pipVals.acApparentPower = 0;
+    pipVals.acActivePower = 0;
+    pipVals.loadPercent = 0;
+    pipVals.busVoltage = 0;
+    pipVals.batteryVoltage = 0.0f;
+    pipVals.batteryChargeCurrent = 0;
+    pipVals.batteryCharge = 0;
+    pipVals.inverterTemperature = 0;
+    pipVals.PVCurrent = 0.0f;
+    pipVals.PVVoltage  = 0;
+    pipVals.PVPower    = 0;
+    pipVals.batterySCC = 0.0f;
+    pipVals.batteryDischargeCurrent = 0;
+    String("0000000").toCharArray(pipVals.deviceStatus, 8);
+    pipVals.batOffsetFan = 0;
+    pipVals.eepromVers = 0;
+    pipVals.PV1_chargPower = 0;
+    String("000").toCharArray(pipVals.deviceStatus2, 4);
   }
+  else
+  {
+     // Update status with data from inverter    
+    char pipInputBuf[500];
+    char *val;
+    
+    strcpy(pipInputBuf, value.c_str());
+    
+    // Now split the packet into the values
+    val = strtok((char *) pipInputBuf, " "); // get the first value
+    if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
+      {
+        pipVals.gridVoltage = atof(val + 1);  // Skip the initial '('
+      }
+      else
+      {
+        pipVals.gridVoltage = 0.0f;
+      }
+  
+    pipVals.gridFrequency = strtok(0, " "); // Get the next value
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.acOutput = atof(val);
+  
+    pipVals.acFrequency = strtok(0, " "); // Get the next value
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.acApparentPower = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.acActivePower = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.loadPercent = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.busVoltage = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batteryVoltage = atof(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batteryChargeCurrent = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batteryCharge = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.inverterTemperature = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.PVCurrent = atof(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.PVVoltage = atoi(val);
+  
+    pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batterySCC = atof(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batteryDischargeCurrent = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    strcpy(pipVals.deviceStatus, val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.batOffsetFan = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.eepromVers = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.PV1_chargPower = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    strcpy(pipVals.deviceStatus2, String(val).substring(0,3).c_str());
+    debugV("INVERTER: store_QPIGS com dados : pipVals.deviceStatus2: |%s| -- VAL |%s|", pipVals.deviceStatus2, val);
+   }
 
-   if ( cmd == QPI )
-    {
-        
-    }
+    // Update status with or without data from inverter
+    store_status ();
+    store_status2 ();
 }
 
 void INVERTER::store_status ()
 {
   char val[8];
-  strcpy(pipVals.deviceStatus, val);		// get the first value
+  strcpy(val, pipVals.deviceStatus);		// get the first value
   DevStatus.SBUpriority      = val[0];
   DevStatus.ConfigStatus     = val[1];		// configuration status: 1: Change 0: unchanged b6
   DevStatus.FwUpdate         = val[2];      // b5: SCC firmware version 1: Updated 0: unchanged
@@ -104,24 +136,19 @@ void INVERTER::store_status ()
 
 void INVERTER::store_status2 ()
 {
-  char val[3];
-  strcpy(pipVals.deviceStatus, val);		// get the first value
+  char val[4];
+  strcpy(val, pipVals.deviceStatus2);		// get the first value
 
   DevStatus2.changingFloatMode			 = val[0] ;		// 10: flag for charging to floating mode
   DevStatus2.SwitchOn       				 = val[1] ;		// b9: Switch On
   DevStatus2.dustProof			  	     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
 }
 
-void INVERTER::inverter_console_data(String cmd)
+void INVERTER::inverter_console_data()
 {
-  if (cmd==QPIGS)
-  {
-  // Print out readings
-
-  
-  debugV("grid Voltage:......... |%d| V"   , pipVals.gridVoltage);
+  debugV("grid Voltage:......... |%s| V"   , String(pipVals.gridVoltage).c_str());
   debugV("grid Frequency:....... |%s| Hz"  , pipVals.gridFrequency.c_str());
-  debugV("AC Output:............ |%d| V"   , pipVals.acOutput);
+  debugV("AC Output:............ |%s| V"   , String(pipVals.acOutput).c_str());
   debugV("AC Frequency:......... |%s| Hz"  , pipVals.acFrequency.c_str());
   debugV("AC ApparentPower:..... |%d| VA"  , pipVals.acApparentPower);
   debugV("AC ActivePower:....... |%d| W"   , pipVals.acActivePower);
@@ -141,7 +168,6 @@ void INVERTER::inverter_console_data(String cmd)
   debugV("EEPROM Version:....... |%d|"     , pipVals.eepromVers);
   debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
   debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
-  }
 }
 /*
 void inverter_LCD_data(String cmd)
@@ -234,67 +260,143 @@ uint16_t INVERTER::calc_crc(char *msg, int n)
 
 int INVERTER::inverter_send(String inv_command)
 {
-	Serial3.print(QPIGS+"\r");  //  QPIGS without CRC just for knock-knock for communiction exist
+	Serial3.print("QRST\r");  //  knock-knock for communiction exist
 	Serial3.flush();          // Wait finishing transmitting before going on...
 	if (Serial3.readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
 	{
-		uint16_t vgCrcCheck;
-		int vRequestLen = 0;
-		char s[6];
-		int xx; 
-		int yy;
-
-		vRequestLen = inv_command.length();
-		char vRequestArray[vRequestLen]; //Arrary define
-		inv_command.toCharArray(vRequestArray, vRequestLen + 1);
-
-		//Calculating CRC
-		vgCrcCheck = calc_crc(vRequestArray,vRequestLen);
-
-		// CRC returns two characters - these need to be separated and send as HEX to Inverter
-		String vgCrcCheckString = String(vgCrcCheck, HEX);
-		String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
-			
-		//CRC are returned as B7A9 - need to separate them and change from ASCII to HEX
-		vCrcCorrect.toCharArray(s, 6);
-		sscanf(s, "%x %x", &xx, &yy);  
-
-		inv_command += char(xx);   // add CRC byte 1
-		inv_command += char(yy);   // add CRC byte 2
-		inv_command += "\x0D";     // add CR
-
-		//Sending Request to inverter
-		Serial3.print(inv_command);
-		Serial3.flush();          // Wait finishing transmitting before going on...
-   }
-   else
-   {
+ /* 		uint16_t vgCrcCheck;
+  		int vRequestLen = 0;
+  		char s[6];
+  		int xx; 
+  		int yy;
+  
+  		vRequestLen = inv_command.length();
+  		char vRequestArray[vRequestLen]; //Arrary define
+  		inv_command.toCharArray(vRequestArray, vRequestLen + 1);
+  
+  		//Calculating CRC
+  		vgCrcCheck = calc_crc(vRequestArray,vRequestLen);
+  
+  		// CRC returns two characters - these need to be separated and send as HEX to Inverter
+  		String vgCrcCheckString = String(vgCrcCheck, HEX);
+  		String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
+  			
+  		//CRC are returned as B7A9 - need to separate them and change from ASCII to HEX
+  		vCrcCorrect.toCharArray(s, 6);
+  		sscanf(s, "%x %x", &xx, &yy);  
+  
+  		inv_command += char(xx);   // add CRC byte 1
+  		inv_command += char(yy);   // add CRC byte 2
+ 
+*/
+      inv_command += "\x0D";     // add CR
+  		//Sending Request to inverter
+  		Serial3.print(inv_command);
+  		Serial3.flush();          // Wait finishing transmitting before going on...
+  }
+  else
+  {
 		return -1; // No serial communication
-   }
+  }
    return 0; // NAKss returned, serial communication up and running
 }
 
-int INVERTER::invereter_receive( String cmd )
+int INVERTER::inverter_receive( String cmd, String& str_return )
 {
   if ( inverter_send(cmd)==0 )
     {
-    // Serial.println("read data from inverter");
-     inverterData = Serial3.readStringUntil('\x0D');
+       str_return = Serial3.readStringUntil('\x0D');
 
-    // TEST for NAK
-    // TEST for string lengh
-    // TEST for CRC receipt match with calculated CRC
-    // Different error hangling codes for each one
+        // TEST for NAK
+        // TEST for string lengh
+        // TEST for CRC receipt match with calculated CRC
+        // Different error hangling codes for each one
   
-    debugV("Inverter anwser: |%s|", inverterData.substring(0,inverterData.length()-2));
-    store_val(cmd);                // split inverter answer and store in pipVals
-    inverter_console_data(cmd);     // print pipVals on serial port
-    inverterData = "";             // empty string received by inverter
-    return 0;
+      return 0;
     }
-  else
+    else
     {
- 	  return -1;
+   	  return -1;
 	  }
     
 }
+
+int INVERTER::ask_inverter_data()
+    {
+      String _resultado = "";
+      if (inverter_receive(QPIGS, _resultado) == 0) 
+      {
+         debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
+         
+         store_QPIGS(_resultado.c_str());       // split inverter answer and store in pipVals
+         inverter_console_data();               // print pipVals on serial port
+         inverterData = "";                     // empty string received by inverter
+      }
+      else
+      {
+         store_QPIGS("");                       // send empty string to erase previous amounts
+         inverter_console_data();               // print pipVals on serial port
+         debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
+      }      
+    }
+
+int INVERTER::handle_inverter_automation(int _hour, int _min)
+    {
+      String _resultado = "";
+      uint32_t minutes = (_hour * 60) + _min ;              // Minutes to compare with preset time rules
+      
+      const uint32_t _evening_min = ( 18   * 60) +   0  ;   // 18:00hs evening start (sun stops to generating on 16:30, but 
+                                                            // I just use battery as from 18hs to save them from deep discharge
+                                                       
+      const uint32_t _begin_min     = (  7   * 60) +   30 ; // 07:30hs start generating solar power
+
+      // RULE #1 //////////////////////////////////////////////////////////
+      //  - After "_begin_min" and before "_evening_min"
+      //
+      //  SET: SOLAR = Solar First (Solar, Utility and Battery) 
+      /////////////////////////////////////////////////////////////////////
+       
+      if ((_begin_min < minutes) && (minutes < _evening_min))
+      {
+        // Informed time is between sun rise and evening = set as "Solar First"
+        
+        if (POP_status != POP01)
+        {
+          // Only changes the Output Priority if previous status is different
+          if (inverter_receive(POP01, _resultado) == 0)                   
+          {
+             debugA("INVERTER: POP01: command executed successfully. Returned: |%s|", _resultado.c_str());
+             POP_status = POP01;
+          }
+          else
+          {
+             debugA("INVERTER: POP01: Error executing the command! Returned: |%s|", _resultado.c_str());       
+          }
+        }
+      }
+
+      // RULE #2 //////////////////////////////////////////////////////////
+      //  - Before "_begin_min" OR after "_evening_min"
+      //
+      //  SET: SBU (Solar, Battery and Utility) 
+      /////////////////////////////////////////////////////////////////////
+       
+      if ((_begin_min > minutes) || (minutes > _evening_min))
+      {
+        // Informed time is between sun rise and evening = set as "Solar First"
+        
+        if (POP_status != POP02)
+        {
+          // Only changes the Output Priority if previous status is different
+          if (inverter_receive(POP02, _resultado) == 0)                   
+          {
+             debugA("INVERTER: POP02: command executed successfully. Returned: |%s|", _resultado.c_str());
+             POP_status = POP02;
+          }
+          else
+          {
+             debugA("INVERTER: POP02: Error executing the command! Returned: |%s|", _resultado.c_str());       
+          }
+        }
+      }
+    }

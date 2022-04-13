@@ -67,6 +67,8 @@ static DS1307 RTC;
 
 /// Personel INVERTER class
 static INVERTER inv;
+
+
 /// Benchmark
 uint32_t oldtime = 0;
 
@@ -99,6 +101,9 @@ void setup() {
   Serial3.setTimeout(800);
 // Pending ...
 // Check and present Serial3 status
+
+//***** INVERTER ***************************************************
+  inv.begin();
 
 
 //***** WIFI Connection ***************************************************
@@ -137,18 +142,31 @@ void loop()
   //TO DO: function "askInverter": Test the feedback string before returning the response string
   //stemp = askInverter(QPIGS);
 
-  if (inv.invereter_receive( inv.QPIGS)!=0)
+  if (inv.ask_inverter_data()==0)
   {
-     Serial.println("Handling communication error no prepared...");
-  };
+     debugV("INVERTER: DATA: Successfully.");
+  }
+  else
+  {
+     debugE("INVERTER: DATA: Error executing the command!");        
+  } 
+
+  if (inv.handle_inverter_automation(19, 23) == 0)
+  {
+     debugV("INVERTER: Automation Successfully.");
+  }
+  else
+  {
+     debugE("INVERTER: Automation Error!");        
+  }   
   
   // Split the feedback string into meaningfull variables and generate debug (verbose ON) info on serial monitor
   //handleQPIGSfeedback(stemp);
 
 
-  Serial.print("Time spent on LOOP: ");
-  Serial.print(millis() - oldtime);
-  Serial.println("ms");
+//  Serial.print("Time spent on LOOP: ");
+//  Serial.print(millis() - oldtime);
+//  Serial.println("ms");
   //Serial.println(inv.pipVals.gridFrequency);
   
 }
