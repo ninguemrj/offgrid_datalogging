@@ -16,13 +16,15 @@ void INVERTER::begin()
 
 void INVERTER::store_QPIGS(String value)
 {
+  
   if (value == "")
   {
-    // Update status without data from inverter    
-    pipVals.gridVoltage = 0.0f;  
-    pipVals.gridFrequency = "";
-    pipVals.acOutput = 0.0f;
-    pipVals.acFrequency = "";
+    // Update status variables without data when nothing returned from inverter  
+      
+    pipVals.gridVoltage = 0;  
+    pipVals.gridFrequency = 0;
+    pipVals.acOutput = 0;
+    pipVals.acFrequency = 0;
     pipVals.acApparentPower = 0;
     pipVals.acActivePower = 0;
     pipVals.loadPercent = 0;
@@ -54,19 +56,21 @@ void INVERTER::store_QPIGS(String value)
     val = strtok((char *) pipInputBuf, " "); // get the first value
     if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
       {
-        pipVals.gridVoltage = atof(val + 1);  // Skip the initial '('
+        pipVals.gridVoltage = atof(val + 1) * 10;  // Skip the initial '('
       }
       else
       {
-        pipVals.gridVoltage = 0.0f;
+        pipVals.gridVoltage = 0;
       }
   
-    pipVals.gridFrequency = strtok(0, " "); // Get the next value
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.acOutput = atof(val);
-  
-    pipVals.acFrequency = strtok(0, " "); // Get the next value
+  val = strtok(0, " "); // Get the next value
+  pipVals.gridFrequency = atof(val) * 10 ;
+
+  val = strtok(0, " "); // Get the next value
+  pipVals.acOutput = atof(val) * 10;
+
+  val = strtok(0, " "); // Get the next value
+  pipVals.acFrequency = atof(val) * 10;
   
     val = strtok(0, " "); // Get the next value
     pipVals.acApparentPower = atoi(val);
@@ -81,7 +85,7 @@ void INVERTER::store_QPIGS(String value)
     pipVals.busVoltage = atoi(val);
   
     val = strtok(0, " "); // Get the next value
-    pipVals.batteryVoltage = atof(val);
+    pipVals.batteryVoltage = atof(val)*100;
   
     val = strtok(0, " "); // Get the next value
     pipVals.batteryChargeCurrent = atoi(val);
@@ -93,15 +97,15 @@ void INVERTER::store_QPIGS(String value)
     pipVals.inverterTemperature = atoi(val);
   
     val = strtok(0, " "); // Get the next value
-    pipVals.PVCurrent = atof(val);
+    pipVals.PVCurrent = atof(val)*10;
   
     val = strtok(0, " "); // Get the next value
-    pipVals.PVVoltage = atoi(val);
+    pipVals.PVVoltage = atof(val)*10;
   
-    pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
+    pipVals.PVPower= (pipVals.PVVoltage/10) * (pipVals.PVCurrent/10) * 10; // Calculate PV Power
   
     val = strtok(0, " "); // Get the next value
-    pipVals.batterySCC = atof(val);
+    pipVals.batterySCC = atof(val)*100;
   
     val = strtok(0, " "); // Get the next value
     pipVals.batteryDischargeCurrent = atoi(val);
@@ -153,22 +157,22 @@ void INVERTER::store_status2 ()
 
 void INVERTER::inverter_console_data()
 {
-  debugV("grid Voltage:......... |%s| V"   , String(pipVals.gridVoltage).c_str());
-  debugV("grid Frequency:....... |%s| Hz"  , pipVals.gridFrequency.c_str());
-  debugV("AC Output:............ |%s| V"   , String(pipVals.acOutput).c_str());
-  debugV("AC Frequency:......... |%s| Hz"  , pipVals.acFrequency.c_str());
+  debugV("grid Voltage:......... |%s| V"   , String(pipVals.gridVoltage/10.0).c_str());
+  debugV("grid Frequency:....... |%s| Hz"  , String(pipVals.gridFrequency/10.0).c_str());
+  debugV("AC Output:............ |%s| V"   , String(pipVals.acOutput/10.0).c_str());
+  debugV("AC Frequency:......... |%s| Hz"  , String(pipVals.acFrequency/10.0).c_str());
   debugV("AC ApparentPower:..... |%d| VA"  , pipVals.acApparentPower);
   debugV("AC ActivePower:....... |%d| W"   , pipVals.acActivePower);
   debugV("load Percent:......... |%d| %"   , pipVals.loadPercent);
   debugV("bus Voltage:.......... |%d| V"   , pipVals.busVoltage); 
-  debugV("battery Voltage:...... |%s| V"   , String(pipVals.batteryVoltage).c_str());
+  debugV("battery Voltage:...... |%s| V"   , String(pipVals.batteryVoltage/100.00).c_str());
   debugV("battery ChargeCurrent: |%d| A"   , pipVals.batteryChargeCurrent); 
   debugV("battery Charge:....... |%d| %"   , pipVals.batteryCharge); 
   debugV("inverter Temperature:. |%d| C"   , pipVals.inverterTemperature); 
-  debugV("PV Current:........... |%s| A"   , String(pipVals.PVCurrent).c_str());
-  debugV("PV Voltage:........... |%d| V"   , pipVals.PVVoltage); 
-  debugV("PV Power:............. |%d| W"   , pipVals.PVPower);  
-  debugV("Battery SCC:.......... |%d| V"   , pipVals.batterySCC);
+  debugV("PV Current:........... |%s| A"   , String(pipVals.PVCurrent /10.0).c_str());
+  debugV("PV Voltage:........... |%s| V"   , String(pipVals.PVVoltage /10.0).c_str()); 
+  debugV("PV Power:............. |%s| W"   , String(pipVals.PVPower   /10.0).c_str());  
+  debugV("Battery SCC:.......... |%s| V"   , String(pipVals.batterySCC/100.00).c_str()); 
   debugV("Batt DischargeCurrent: |%d| A"   , pipVals.batteryDischargeCurrent); 
   debugV("DeviceStatus:......... |%s|"     , pipVals.deviceStatus);
   debugV("Battery offset Fan:... |%d| V"   , pipVals.batOffsetFan);
@@ -285,6 +289,8 @@ int INVERTER::ask_inverter_data()
       {
          store_QPIGS("");                       // send empty string to erase previous amounts
          inverter_console_data();               // print pipVals on serial port
+         
+         // Needs to treat errors for better error messages
          debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
       }      
     }
@@ -319,6 +325,7 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           }
           else
           {
+             // Needs to treat errors for better error messages
              debugA("INVERTER: POP01: Error executing the command! Returned: |%s|", _resultado.c_str());       
           }
         }
@@ -344,6 +351,7 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           }
           else
           {
+            // Needs to treat errors for better error messages
              debugA("INVERTER: POP02: Error executing the command! Returned: |%s|", _resultado.c_str());       
           }
         }

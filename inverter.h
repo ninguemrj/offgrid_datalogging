@@ -57,22 +57,22 @@ class INVERTER
 		String PPCP   = "\x50\x50\x43\x50";         // <MNN><cr>: Setting parallel device charger priority (For 4K/5K)  pg 18
     // Structure to store the data for QPIGS
     struct pipVals_t {
-      float gridVoltage;                // xxx.x V
-      String gridFrequency;             // xx.xx Hz  
-      float acOutput;                   // xxx.x V
-      String acFrequency;               // xx.xx Hz
+      uint32_t gridVoltage;             // xxx.x V   * 10
+      uint32_t gridFrequency;           // xx.xx Hz  * 10
+      uint32_t acOutput;                // xxx.x V   * 10
+      uint32_t acFrequency;             // xx.xx Hz  * 10
       uint32_t acApparentPower;         // xxxx VA
       uint32_t acActivePower;           // xxxx W
       uint32_t loadPercent;             // xxx %
       uint32_t busVoltage;              // xxxx V
-      float batteryVoltage;             // xx.xx V
+      uint32_t batteryVoltage;          // xx.xx V   * 100
       uint32_t batteryChargeCurrent;    // xxx A
       uint32_t batteryCharge;           // %
       uint32_t inverterTemperature;     // xxxx
-      float PVCurrent;                  // xx.x A
+      uint32_t PVCurrent;               // xx.x A    * 10
       uint32_t PVVoltage;               // xx V
-      uint32_t PVPower;                 // xxxx W
-      float batterySCC;                 // xx.xx V
+      uint32_t PVPower;                 // xxxx W    * 10
+      uint32_t batterySCC;              // xx.xx V   * 100
       uint32_t batteryDischargeCurrent; // xxxx A
       char deviceStatus[8];             // 8 bit binary
       uint32_t batOffsetFan;            // Battery voltage offset for fans on  (2 numbers)
