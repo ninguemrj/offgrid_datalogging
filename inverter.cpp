@@ -112,7 +112,6 @@ void INVERTER::store_QPIGS(String value)
   
     val = strtok(0, " "); // Get the next value
     strcpy(pipVals.deviceStatus2, String(val).substring(0,3).c_str());
-    debugV("INVERTER: store_QPIGS com dados : pipVals.deviceStatus2: |%s| -- VAL |%s|", pipVals.deviceStatus2, val);
    }
 
     // Update status with or without data from inverter
@@ -169,64 +168,6 @@ void INVERTER::inverter_console_data()
   debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
   debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
 }
-/*
-void inverter_LCD_data(String cmd)
-{
-  if (cmd==QPIGS)
-  {
-  // Print out QPIGS values on LCD
-  lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
-  lcdsetCursor(8,0); lcdprint("  ");    lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10,0);
-  lcdsetCursor(14,0); lcdprint("    "); lcdsetCursor(14,0); lcdprint(pipVals.acApparentPower);
-  lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput);
-  lcdsetCursor(8,1); lcdprint("  ");    lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10,0);
-  lcdsetCursor(14,1); lcdprint("    "); lcdsetCursor(14,1); lcdprint(pipVals.acActivePower);
-        
-  // lcdprint("bus Voltage: "); lcdprint(pipVals.busVoltage/100); lcdprint(" V");    // not ift onto LCD
-      
-  lcdsetCursor(3,2); lcdprint("    ");  lcdsetCursor(3,2);  lcdprint(pipVals.batteryVoltage/100.00,2);
-  lcdsetCursor(10,2); lcdprint("   ");  lcdsetCursor(10,2); lcdprint(pipVals.batteryChargeCurrent);
-  lcdsetCursor(16,2); lcdprint("   ");  lcdsetCursor(16,2); lcdprint(pipVals.batteryCharge);
-        
-  // lcdprint("inverter Temperature:. ");  lcdprint(pipVals.inverterTemperature); lcdprint(" C");   // not fit onto LCD
-        
-  lcdsetCursor(3,3); lcdprint("  ");   lcdsetCursor(3,3);  lcdprint(pipVals.PVVoltage);
-  lcdsetCursor(8,3); lcdprint("  ");   lcdsetCursor(8,3);  lcdprint(pipVals.PVCurrent);
-  lcdsetCursor(12,3); lcdprint("   "); lcdsetCursor(12,3); lcdprint(pipVals.PVPower);
-  lcdsetCursor(16,3); lcdprint("   "); lcdsetCursor(16,3); lcdprint(pipVals.loadPercent);
-  LCDbase=true;  
-  }
-}
-
-void inverter_LCD_base(String cmd)
-{
-
-  if (cmd=QPIGS)
-  {
-  lcdsetCursor(0,0);   lcdprint("Gr");  // Abbreviation of Grid
-  lcdsetCursor(0,1);   lcdprint("Ou");  // Abbreviation of Output
-  lcdsetCursor(0,2);   lcdprint("Ba");  // Abbreviation of Battery
-  lcdsetCursor(0,3);   lcdprint("PV");  // Abbreviation of PhotoVoltaic
-  //print metrics
-  lcdsetCursor(6,0);   lcdprint("V");   // Grid Voltage
-  lcdsetCursor(10,0);  lcdprint("Hz");  // Grid frequency
-  lcdsetCursor(18,0);  lcdprint("VA");  // Output load Apparent power (VA)
-
-  lcdsetCursor(6,1);   lcdprint("V");  //  Output Voltage
-  lcdsetCursor(10,1);  lcdprint("Hz"); //  Output Frequency
-  lcdsetCursor(19,1);  lcdprint("W");  //  Active power (load) 
-  
-  lcdsetCursor(8,2);   lcdprint("V");  // Battery Voltage
-  lcdsetCursor(13,2);  lcdprint("A");  // Battery charge current
-  lcdsetCursor(19,2);  lcdprint("%");  // Battery charge in %
-
-  lcdsetCursor(5,3);   lcdprint("V");  // PV voltage
-  lcdsetCursor(10,3);  lcdprint("A");  // PV current
-  lcdsetCursor(15,3);  lcdprint("W");  // PV power
-  lcdsetCursor(19,3);  lcdprint("%");  // Inverter load in %  
-  }
-}
-*/
 
 // ******************************************  CRC Functions  ******************************************
 uint16_t INVERTER::crc_xmodem_update (uint16_t crc, uint8_t data)
