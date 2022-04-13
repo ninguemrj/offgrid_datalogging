@@ -1,4 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Arduino thread about communicating with the solar inverter: https://forum.arduino.cc/t/rs232-read-data-from-mpp-solar-inverter/600960/72
+// Thanks for "athersaleem", "DanX3", "sibianul", "Lerryl79" and my other that shared their knowledge and finds in the Arduino forum.
 // Version 1.0 written by Lerryl79 (https://github.com/larryl79/Inverter-Communicator)
 // Version 2.0 Copied and changed to fit the Ricardo Jr´s project (https://github.com/ninguemrj/offgrid_datalogging/)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
