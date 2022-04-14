@@ -3,13 +3,17 @@
 
 #include <string.h>
 #include <HardwareSerial.h>
+#include <SoftwareSerial.h>
 #include <Arduino.h>
 //#include <lib_lcd_helper.h>
 
 class INVERTER
 {
 	public:
-
+    INVERTER( HardwareSerial& device) {hwStream = &device;}
+    INVERTER( SoftwareSerial& device) {swStream = &device;}
+    void begin(uint32_t baudRate);
+    
     String POP_status;
 		String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
 		String ACK = "\x41\x43\x4B";               // this message receiving on acknovledge of command
@@ -168,19 +172,21 @@ class INVERTER
       char id[16];
     };
 		
-    void begin();
+    void inverter_console_data();
     int handle_inverter_automation(int _hour, int _min);
     int ask_inverter_data();
 
+    
 	private:
 		String inverterData;
 		byte incomingdata;
-
+    HardwareSerial* hwStream;
+    SoftwareSerial* swStream;
+    Stream* _streamRef;
 
 		void store_QPIGS(String value);
     void store_status();
     void store_status2();
-		void inverter_console_data();
     int inverter_receive( String cmd, String& str_return );
     int inverter_send ( String inv_command );
 

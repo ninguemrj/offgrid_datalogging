@@ -66,7 +66,7 @@ TO DO LIST:
 static DS1307 RTC;
 
 /// Personel INVERTER class
-static INVERTER inv;
+static INVERTER inv(Serial3);
 
 
 /// Benchmark
@@ -97,13 +97,15 @@ void setup() {
 
 //***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
   
-  Serial3.begin(2400);
-  Serial3.setTimeout(800);
+//  Serial3.begin(2400);
+//  Serial3.setTimeout(800);
 // Pending ...
 // Check and present Serial3 status
 
 //***** INVERTER ***************************************************
-  inv.begin();
+  // Informs INVERTER class which serial port to use when talking with solar inverter
+  inv.begin(2400);  
+
 
 
 //***** WIFI Connection ***************************************************
@@ -129,6 +131,8 @@ void setup() {
 
 void loop()
 {
+  int returned_code = 0;
+  
   // stemp for testing pourposes only, it will be remeved later
   //String stemp = "";
 
@@ -142,22 +146,29 @@ void loop()
   //TO DO: function "askInverter": Test the feedback string before returning the response string
   //stemp = askInverter(QPIGS);
 
-  if (inv.ask_inverter_data()==0)
+  //// request QPIGS data from inverter  /////////////////////////////////////////////
+  returned_code = inv.ask_inverter_data();
+  if (returned_code == 0)                 
   {
-     debugV("INVERTER: DATA: Successfully.");
+    debugV("INVERTER: DATA: Successfully.");
   }
   else
   {
-     debugE("INVERTER: DATA: Error executing the command!");        
-  } 
+    debugE("INVERTER: DATA: Error executing the command! Erro code: %d", returned_code);        
+  }
 
-  if (inv.handle_inverter_automation(19, 23) == 0)
+  // print pipVals on serial port only on VERBOSE mode
+  inv.inverter_console_data();                     
+
+  //// changes inverter settings considering some rules  /////////////////////////////
+  returned_code = inv.handle_inverter_automation(19, 23);
+  if (returned_code == 0)
   {
      debugV("INVERTER: Automation Successfully.");
   }
   else
   {
-     debugE("INVERTER: Automation Error!");        
+     debugE("INVERTER: Automation Error! Error code: %d", returned_code);        
   }   
   
   // Split the feedback string into meaningfull variables and generate debug (verbose ON) info on serial monitor

@@ -9,8 +9,19 @@
 #include "inverter.h"
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 
-void INVERTER::begin()
+void INVERTER::begin(uint32_t baudRate)
 {
+  if (hwStream)
+  {
+    hwStream->begin(baudRate);
+  }
+  else
+  {
+    swStream->begin(baudRate);
+  }
+  _streamRef = !hwStream? (Stream*)swStream : hwStream;
+
+  // Initialize POP control status flag
   POP_status = "";
 }
 
@@ -213,9 +224,9 @@ uint16_t INVERTER::calc_crc(char *msg, int n)
 
 int INVERTER::inverter_send(String inv_command)
 {
-	Serial3.print("QRST\r");  //  knock-knock for communiction exist
-	Serial3.flush();          // Wait finishing transmitting before going on...
-	if (Serial3.readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
+	_streamRef->print("QRST\r");  //  knock-knock for communiction exist
+	_streamRef->flush();          // Wait finishing transmitting before going on...
+	if (_streamRef->readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
 	{
  /* 		uint16_t vgCrcCheck;
   		int vRequestLen = 0;
@@ -244,8 +255,8 @@ int INVERTER::inverter_send(String inv_command)
 */
       inv_command += "\x0D";     // add CR
   		//Sending Request to inverter
-  		Serial3.print(inv_command);
-  		Serial3.flush();          // Wait finishing transmitting before going on...
+  		_streamRef->print(inv_command);
+  		_streamRef->flush();          // Wait finishing transmitting before going on...
   }
   else
   {
@@ -258,13 +269,18 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
 {
   if ( inverter_send(cmd)==0 )
     {
-       str_return = Serial3.readStringUntil('\x0D');
+      str_return = _streamRef->readStringUntil('\x0D');
+      
+      // checking Command not recognized 
+      if (str_return == "(NAKss") 
+      {
+        debugV("INVERTER: %s : Not recognized command: %s", cmd, str_return);
+        return -2;   
+      }
 
-        // TEST for NAK
-        // TEST for string lengh
-        // TEST for CRC receipt match with calculated CRC
-        // Different error hangling codes for each one
-  
+      // TEST for CRC receipt match with calculated CRC
+      // Different error hangling codes for each one
+      
       return 0;
     }
     else
@@ -276,23 +292,32 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
 
 int INVERTER::ask_inverter_data()
     {
+      int funct_return = 0;
       String _resultado = "";
       if (inverter_receive(QPIGS, _resultado) == 0) 
       {
-         debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
-         
-         store_QPIGS(_resultado.c_str());       // split inverter answer and store in pipVals
-         inverter_console_data();               // print pipVals on serial port
-         inverterData = "";                     // empty string received by inverter
+        // checking return string lengh for QPIGS command 
+        if (strlen(_resultado.c_str()) < 89)       
+        {
+          debugE("INVERTER: QPIGS: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_resultado.c_str()), _resultado.c_str());
+          _resultado = "";                                // clear the string result from inverter as it is not complete
+          funct_return = -1;                              // short string lengh for QPIGS command 
+        }
+        else
+        {
+          debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
+          funct_return = 0;                               // Success!!!
+        }
       }
       else
       {
-         store_QPIGS("");                       // send empty string to erase previous amounts
-         inverter_console_data();               // print pipVals on serial port
-         
-         // Needs to treat errors for better error messages
          debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
+         _resultado = "";                                 // clear the string result from inverter as an error occured
+         funct_return = -2;                               // short string lengh for QPIGS command 
       }      
+
+      store_QPIGS(_resultado.c_str());                    // store in pipVals the inverter response or nothing.
+      return (int)funct_return;
     }
 
 int INVERTER::handle_inverter_automation(int _hour, int _min)
