@@ -61,9 +61,9 @@ class INVERTER
 		String PPCP   = "\x50\x50\x43\x50";         // <MNN><cr>: Setting parallel device charger priority (For 4K/5K)  pg 18
     // Structure to store the data for QPIGS
     struct pipVals_t {
-      uint32_t gridVoltage;             // xxx.x V   * 10
+      uint32_t gridVoltage;             // xxx V   
       uint32_t gridFrequency;           // xx.xx Hz  * 10
-      uint32_t acOutput;                // xxx.x V   * 10
+      uint32_t acOutput;                // xxx V   
       uint32_t acFrequency;             // xx.xx Hz  * 10
       uint32_t acApparentPower;         // xxxx VA
       uint32_t acActivePower;           // xxxx W
@@ -190,6 +190,13 @@ class INVERTER
     int inverter_receive( String cmd, String& str_return );
     int inverter_send ( String inv_command );
 
+
+		int average_count;
+    uint32_t average_oldtime;
+
+    pipVals_t _pip_average;
+    
+ 		
 		// ******************************************  CRC Functions  ******************************************
 		uint16_t crc_xmodem_update (uint16_t crc, uint8_t data);
 		uint16_t calc_crc(char *msg, int n);

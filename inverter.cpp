@@ -9,6 +9,9 @@
 #include "inverter.h"
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 
+
+
+
 void INVERTER::begin(uint32_t baudRate)
 {
   if (hwStream)
@@ -23,123 +26,172 @@ void INVERTER::begin(uint32_t baudRate)
 
   // Initialize POP control status flag
   POP_status = "";
+  average_count = 0;
+  
+  //--- For benchmarking the Solar inverter communication ---------------
+  average_oldtime=millis();
 }
 
 void INVERTER::store_QPIGS(String value)
 {
-  
-  if (value == "")
+  if (average_count < 10)
   {
-    // Update status variables without data when nothing returned from inverter  
-      
-    pipVals.gridVoltage = 0;  
-    pipVals.gridFrequency = 0;
-    pipVals.acOutput = 0;
-    pipVals.acFrequency = 0;
-    pipVals.acApparentPower = 0;
-    pipVals.acActivePower = 0;
-    pipVals.loadPercent = 0;
-    pipVals.busVoltage = 0;
-    pipVals.batteryVoltage = 0.0f;
-    pipVals.batteryChargeCurrent = 0;
-    pipVals.batteryCharge = 0;
-    pipVals.inverterTemperature = 0;
-    pipVals.PVCurrent = 0.0f;
-    pipVals.PVVoltage  = 0;
-    pipVals.PVPower    = 0;
-    pipVals.batterySCC = 0.0f;
-    pipVals.batteryDischargeCurrent = 0;
-    String("0000000").toCharArray(pipVals.deviceStatus, 8);
-    pipVals.batOffsetFan = 0;
-    pipVals.eepromVers = 0;
-    pipVals.PV1_chargPower = 0;
-    String("000").toCharArray(pipVals.deviceStatus2, 4);
-  }
-  else
-  {
-     // Update status with data from inverter    
-    char pipInputBuf[500];
-    char *val;
-    
-    strcpy(pipInputBuf, value.c_str());
-    
-    // Now split the packet into the values
-    val = strtok((char *) pipInputBuf, " "); // get the first value
-    if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
+      //--- Accumulates readings from 0 to 9 ------------------------------------------
+      debugV ("Test countdown : %d", average_count);
+
+
+      if (value == "")
       {
-        pipVals.gridVoltage = atof(val + 1) * 10;  // Skip the initial '('
+        //--- QPIGS without data, skip this reading and wait next one -----------------  
+         average_count--;  
       }
       else
       {
-        pipVals.gridVoltage = 0;
-      }
-  
-  val = strtok(0, " "); // Get the next value
-  pipVals.gridFrequency = atof(val) * 10 ;
+         //--- Update status with data from inverter  ---------------------------------  
+        char pipInputBuf[500];
+        char *val;
+        
+        strcpy(pipInputBuf, value.c_str());
+        
+        //--- Now split the packet into the values ------------------------------------
+        val = strtok((char *) pipInputBuf, " "); // get the first value
+        if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
+          {
+            _pip_average.gridVoltage += atoi(val + 1);  // Skip the initial '('
+          }
+          else
+          {
+            _pip_average.gridVoltage += 0;
+          }
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.gridFrequency += atof(val) * 10 ;
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.acOutput += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.acFrequency += atof(val) * 10;
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.acApparentPower += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.acActivePower += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.loadPercent += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.busVoltage += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batteryVoltage += atof(val)*100;
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batteryChargeCurrent += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batteryCharge += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.inverterTemperature += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.PVCurrent += atof(val)*10;
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.PVVoltage += atof(val)*10;
+      
+        _pip_average.PVPower += (_pip_average.PVVoltage/10) * (_pip_average.PVCurrent/10) * 10; // Calculate PV Power
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batterySCC += atof(val)*100;
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batteryDischargeCurrent += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        strcpy(_pip_average.deviceStatus, val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.batOffsetFan = atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.eepromVers = atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        _pip_average.PV1_chargPower += atoi(val);
+      
+        val = strtok(0, " "); // Get the next value
+        strcpy(_pip_average.deviceStatus2, String(val).substring(0,3).c_str());
+       }
+   
+      //--- Prepare counting for next array posotion -------------------------------
+      average_count++;
+  }
+  else
+  {
+      //--- 10 = calculate average amounts to populate pipvals variables ---------------
 
-  val = strtok(0, " "); // Get the next value
-  pipVals.acOutput = atof(val) * 10;
+        pipVals.gridVoltage             = _pip_average.gridVoltage/10;
+        pipVals.gridFrequency           = _pip_average.gridFrequency/10 ;
+        pipVals.acOutput                = _pip_average.acOutput/10;
+        pipVals.acFrequency             = _pip_average.acFrequency/10;
+        pipVals.acApparentPower         = _pip_average.acApparentPower/10;
+        pipVals.acActivePower           = _pip_average.acActivePower/10;
+        pipVals.loadPercent             = _pip_average.loadPercent/10;
+        pipVals.busVoltage              = _pip_average.busVoltage/10;
+        pipVals.batteryVoltage          = _pip_average.batteryVoltage/10;
+        pipVals.batteryChargeCurrent    = _pip_average.batteryChargeCurrent/10;
+        pipVals.batteryCharge           = _pip_average.batteryCharge/10;
+        pipVals.inverterTemperature     = _pip_average.inverterTemperature/10;
+        pipVals.PVCurrent               = _pip_average.PVCurrent/10;
+        pipVals.PVVoltage               = _pip_average.PVVoltage/10;
+        pipVals.PVPower                 = _pip_average.PVPower/10;
+        pipVals.batterySCC              = _pip_average.batterySCC /10;
+        pipVals.batteryDischargeCurrent = _pip_average.batteryDischargeCurrent/10;
+        pipVals.PV1_chargPower          = _pip_average.PV1_chargPower/10;
+        pipVals.batOffsetFan            = _pip_average.batOffsetFan;  // take the lastest read string
+        pipVals.eepromVers              = _pip_average.eepromVers;    // take the lastest read string
+        strcpy(pipVals.deviceStatus2, _pip_average.deviceStatus2);    // take the lastest read string
+        strcpy(pipVals.deviceStatus,  _pip_average.deviceStatus);     // take the lastest read string
+        
+        //--- Update status with latest read data from inverter ---------------------------
+        store_status ();
+        store_status2 ();
 
-  val = strtok(0, " "); // Get the next value
-  pipVals.acFrequency = atof(val) * 10;
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.acApparentPower = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.acActivePower = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.loadPercent = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.busVoltage = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batteryVoltage = atof(val)*100;
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batteryChargeCurrent = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batteryCharge = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.inverterTemperature = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.PVCurrent = atof(val)*10;
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.PVVoltage = atof(val)*10;
-  
-    pipVals.PVPower= (pipVals.PVVoltage/10) * (pipVals.PVCurrent/10) * 10; // Calculate PV Power
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batterySCC = atof(val)*100;
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batteryDischargeCurrent = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    strcpy(pipVals.deviceStatus, val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.batOffsetFan = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.eepromVers = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    pipVals.PV1_chargPower = atoi(val);
-  
-    val = strtok(0, " "); // Get the next value
-    strcpy(pipVals.deviceStatus2, String(val).substring(0,3).c_str());
-   }
+        //--- RESETs the _pip_average values to not accummulate the next readings with previous ones ----
+        _pip_average.gridVoltage              = 0;
+        _pip_average.gridFrequency            = 0;
+        _pip_average.acOutput                 = 0;
+        _pip_average.acFrequency              = 0;
+        _pip_average.acApparentPower          = 0;
+        _pip_average.acActivePower            = 0;
+        _pip_average.loadPercent              = 0;
+        _pip_average.busVoltage               = 0;
+        _pip_average.batteryVoltage           = 0;
+        _pip_average.batteryChargeCurrent     = 0;
+        _pip_average.batteryCharge            = 0;
+        _pip_average.inverterTemperature      = 0;
+        _pip_average.PVCurrent                = 0;
+        _pip_average.PVVoltage                = 0;
+        _pip_average.PVPower                  = 0;
+        _pip_average.batterySCC               = 0;
+        _pip_average.batteryDischargeCurrent  = 0;
+        _pip_average.PV1_chargPower           = 0;
 
-    // Update status with or without data from inverter
-    store_status ();
-    store_status2 ();
+
+
+      //--- For benchmarking the averaged Solar inverter communication ---------------------------      
+      debugA ("Time to calculate the average %d, count = %d", (millis() - average_oldtime), average_count);
+      average_oldtime = millis();
+
+      //--- RESETs average counting -----------------------------------------------------
+      average_count = 0;  
+  }
+  
+
 }
 
 void INVERTER::store_status ()
@@ -168,9 +220,9 @@ void INVERTER::store_status2 ()
 
 void INVERTER::inverter_console_data()
 {
-  debugV("grid Voltage:......... |%s| V"   , String(pipVals.gridVoltage/10.0).c_str());
+  debugV("grid Voltage:......... |%d| V"   , pipVals.gridVoltage);
   debugV("grid Frequency:....... |%s| Hz"  , String(pipVals.gridFrequency/10.0).c_str());
-  debugV("AC Output:............ |%s| V"   , String(pipVals.acOutput/10.0).c_str());
+  debugV("AC Output:............ |%d| V"   , pipVals.acOutput);
   debugV("AC Frequency:......... |%s| Hz"  , String(pipVals.acFrequency/10.0).c_str());
   debugV("AC ApparentPower:..... |%d| VA"  , pipVals.acApparentPower);
   debugV("AC ActivePower:....... |%d| W"   , pipVals.acActivePower);
