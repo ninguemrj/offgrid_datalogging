@@ -25,27 +25,82 @@ void INVERTER::begin(uint32_t _baudRate, char _protocol) // "A" = 18 fields from
   _streamRef = !hwStream? (Stream*)swStream : hwStream;
 
   // Initialize POP control status flag
-  POP_status = "";
-  average_count = 0;
+  _POP_status = "";
+
+  //--- prepare counter for smoothing reads (average)
+  _average_count = 0;
+
   //--- sets how much fields from QPIGS
   _inverter_protocol = _protocol;
   
   //--- For benchmarking the Solar inverter communication ---------------
-  average_oldtime=millis();
+  _average_oldtime=millis();
+}
+
+void INVERTER::store_QPIRI(String value)
+{
+  if (value == "")
+  {
+    //--- QPIGS without data, skip this reading and wait next one -----------------  
+    pipVals.bat_backToUtilityVolts = 0;
+    pipVals.bat_bulkChargeVolts    = 0;
+    pipVals.bat_FloatChargeVolts   = 0;
+    pipVals.bat_CutOffVolts        = 0;
+    pipVals.OutPutPriority         = 0;
+    pipVals.ChargerSourcePriority  = 0;  
+  }
+  else
+  {
+     //--- Update status with data from inverter  ---------------------------------  
+    char pipInputBuf[200];
+    char *val;
+    
+    strcpy(pipInputBuf, value.c_str());
+    
+    //--- Now split the packet into the values ------------------------------------
+    val = strtok((char *) pipInputBuf, " ");            // discart the 1st value
+    val = strtok(0, " ");                               // discart the 2nd value
+    val = strtok(0, " ");                               // discart the 3th value
+    val = strtok(0, " ");                               // discart the 4th value
+    val = strtok(0, " ");                               // discart the 5th value
+    val = strtok(0, " ");                               // discart the 6th value
+    val = strtok(0, " ");                               // discart the 7th value
+    val = strtok(0, " ");                               // discart the 8th value
+    val = strtok(0, " ");                               // 9th value -> backToUtilityVolts
+    pipVals.bat_backToUtilityVolts = atof(val) * 10 ;
+    val = strtok(0, " ");                               // 10th value -> bat_CutOffVolts
+    pipVals.bat_CutOffVolts = atof(val) * 10 ;
+    val = strtok(0, " ");                               // 11th value -> bat_bulkChargeVolts
+    pipVals.bat_bulkChargeVolts = atof(val) * 10 ;
+    val = strtok(0, " ");                               // 12th value -> bat_FloatChargeVolts
+    pipVals.bat_FloatChargeVolts = atof(val) * 10 ;
+    val = strtok(0, " ");                               // discart the 13th value
+    val = strtok(0, " ");                               // discart the 14th value
+    val = strtok(0, " ");                               // discart the 15th value
+    val = strtok(0, " ");                               // discart the 16th value
+    val = strtok(0, " ");                               // 17th value -> OutPutPriority 
+    pipVals.OutPutPriority  = atoi(val);
+    val = strtok(0, " ");                               // 18th value -> ChargerSourcePriority
+    pipVals.ChargerSourcePriority  = atoi(val);   
+
+   // ignore the other QPIRI fields
+    
+  }
+
 }
 
 void INVERTER::store_QPIGS(String value)
 {
-  if (average_count < 10)
+  if (_average_count < 10)
   {
       //--- Accumulates readings from 0 to 9 ------------------------------------------
-      debugV ("Test countdown : %d", average_count);
+      debugV ("Test countdown : %d", _average_count);
 
 
       if (value == "")
       {
         //--- QPIGS without data, skip this reading and wait next one -----------------  
-         average_count--;  
+         _average_count--;  
       }
       else
       {
@@ -132,7 +187,7 @@ void INVERTER::store_QPIGS(String value)
        }
    
       //--- Prepare counting for next array posotion -------------------------------
-      average_count++;
+      _average_count++;
   }
   else
   {
@@ -197,12 +252,9 @@ void INVERTER::store_QPIGS(String value)
 
 
 
-      //--- For benchmarking the averaged Solar inverter communication ---------------------------      
-      debugA ("Time to calculate the average %d, count = %d", (millis() - average_oldtime), average_count);
-      average_oldtime = millis();
 
       //--- RESETs average counting -----------------------------------------------------
-      average_count = 0;  
+      _average_count = 0;  
   }
   
 
@@ -260,6 +312,13 @@ void INVERTER::inverter_console_data()
     debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
     debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
   }
+
+  debugV("Bat Back to Grid:..... |%s| V"   , String(pipVals.bat_backToUtilityVolts/10.0).c_str()); 
+  debugV("Bat Bulk Charge:...... |%s| V"   , String(pipVals.bat_bulkChargeVolts/10.0).c_str()); 
+  debugV("Bat Float Charge:..... |%s| V"   , String(pipVals.bat_FloatChargeVolts/10.0).c_str()); 
+  debugV("Bat CutOff:........... |%s| V"   , String(pipVals.bat_CutOffVolts/10.0).c_str()); 
+  debugV("Output Priority:...... |%d| 0: Utility first / 1: Solar first / 2: SBU first"   , pipVals.OutPutPriority); 
+  debugV("Charging Priority:.... |%d| 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar"   , pipVals.ChargerSourcePriority); 
 }
 
 // ******************************************  CRC Functions  ******************************************
@@ -344,50 +403,80 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
       // checking Command not recognized 
       if (str_return == "(NAKss") 
       {
-        debugV("INVERTER: %s : Not recognized command: %s", cmd, str_return);
+        debugE("INVERTER: %s : Not recognized command: %s", cmd.c_str(), str_return.c_str());
         return -2;   
       }
 
-      // TEST for CRC receipt match with calculated CRC
-      // Different error hangling codes for each one
+      // TODO: TEST for CRC receipt match with calculated CRC
       
+      debugV("INVERTER: %s : Command executed successfully. Returned: %s", cmd.c_str(), str_return.c_str());
       return 0;
     }
     else
     {
+      // No serial communication
+      debugE("INVERTER: %s : No serial communication", cmd.c_str());
+      str_return = "";
    	  return -1;
 	  }
     
 }
 
-int INVERTER::ask_inverter_data()
-    {
-      int funct_return = 0;
-      String _resultado = "";
-      if (inverter_receive(QPIGS, _resultado) == 0) 
+void INVERTER::ask_inverter_QPIRI( String& _result)
+  {
+      int _funct_return = 0;
+      _result = "";
+      _funct_return = inverter_receive(QPIRI, _result);
+      if (_funct_return == 0) 
       {
-        // checking return string lengh for QPIGS command 
-        if (strlen(_resultado.c_str()) < 89)       
+        // checking return string lengh for QPIRI command 
+        if (strlen(_result.c_str()) < 85)       
         {
-          debugE("INVERTER: QPIGS: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_resultado.c_str()), _resultado.c_str());
-          _resultado = "";                                // clear the string result from inverter as it is not complete
-          funct_return = -1;                              // short string lengh for QPIGS command 
-        }
-        else
-        {
-          debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
-          funct_return = 0;                               // Success!!!
+          debugE("INVERTER: QPIRI: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+          _result = "";                                    // clear the string result from inverter as it is not complete
+          _funct_return = -1;                              // short string lengh for QPIRI command 
         }
       }
-      else
-      {
-         debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
-         _resultado = "";                                 // clear the string result from inverter as an error occured
-         funct_return = -2;                               // short string lengh for QPIGS command 
-      }      
+//      store_QPIGS(_result.c_str());                    // store in pipVals the inverter response or nothing.
+//      return (int)_funct_return;    
+  }
 
-      store_QPIGS(_resultado.c_str());                    // store in pipVals the inverter response or nothing.
-      return (int)funct_return;
+int INVERTER::ask_inverter_data()
+    {
+      int _funct_return = 0;
+      String _result = "";
+      _funct_return = inverter_receive(QPIGS, _result);
+      if (_funct_return == 0) 
+      {
+        debugV("INVERTER: QPIGS: Receipt string size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+        // checking return string lengh for QPIGS command 
+        if (strlen(_result.c_str()) < 85)       
+        {
+          debugE("INVERTER: QPIGS: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+          _result = "";                                  // clear the string result from inverter as it is not complete
+          _funct_return = -1;                            // short string lengh for QPIGS command 
+        }
+      }
+      store_QPIGS(_result.c_str());                      // average and store in pipVals the inverter response or nothing.
+
+      // Ask Inverer for QPIRI configuration in the 10th QPIGS reading (0 to 9)
+      // (when the averaged amount will be stored in the public variables)
+      if (_average_count == 9)
+      {
+        String _QPIRI_result;
+        // Ask Inverer for QPIRI
+        ask_inverter_QPIRI(_QPIRI_result);
+
+        // store QPIRI info
+        store_QPIRI(_QPIRI_result);
+
+        //--- For benchmarking the averaged Solar inverter communication ---------------------------      
+        debugA ("Time to calculate the average %d, count = %d", (millis() - _average_oldtime), _average_count);
+        _average_oldtime = millis();
+        
+      }
+      
+      return (int)_funct_return;    
     }
 
 int INVERTER::handle_inverter_automation(int _hour, int _min)
@@ -410,13 +499,13 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
       {
         // Informed time is between sun rise and evening = set as "Solar First"
         
-        if (POP_status != POP01)
+        if (_POP_status != POP01)
         {
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP01, _resultado) == 0)                   
           {
              debugA("INVERTER: POP01: command executed successfully. Returned: |%s|", _resultado.c_str());
-             POP_status = POP01;
+             _POP_status = POP01;
           }
           else
           {
@@ -436,13 +525,13 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
       {
         // Informed time is between sun rise and evening = set as "Solar First"
         
-        if (POP_status != POP02)
+        if (_POP_status != POP02)
         {
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP02, _resultado) == 0)                   
           {
              debugA("INVERTER: POP02: command executed successfully. Returned: |%s|", _resultado.c_str());
-             POP_status = POP02;
+             _POP_status = POP02;
           }
           else
           {

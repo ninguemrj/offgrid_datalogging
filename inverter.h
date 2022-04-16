@@ -25,9 +25,9 @@ class INVERTER
 		String QID      = "\x51\x49\x44";                      // The device serial number inquiry          page 1
 		String QVFW     =  "\x51\x56\x46\x57";                 // Main CPU Firmware version inquiry         page 1
 		String QVFW2    = "\x51\x56\x46\x57\x32";              // Another CPU Firmware version inquiry      page 2
-		String QPIRI    = "\x51\x50\x49\x52\x49";              // Device Rating Information inquiry         page 2
+		String QPIRI    = "\x51\x50\x49\x52\x49\xF8\x54";      // CRC included         // Device Rating Information inquiry         page 2
 		String QFLAG    = "\x51\x46\x4C\x41\x47";              // Device flag status inquiry                page 4
-		String QPIGS    = "\x51\x50\x49\x47\x53\xB7\xA9";       // CRC included       // Device general status parameters inquiry  page 4
+		String QPIGS    = "\x51\x50\x49\x47\x53\xB7\xA9";      // CRC included       // Device general status parameters inquiry  page 4
 		String QMOD     = "\x51\x4D\x4F\x44";                  // Device Mode inquiry                                           page 6
 		String QPIWS    = "\x51\x50\x49\x57\x53";              // Device Warning Status inquiry                                 page 6
 		String QDI      = "\x51\x44\x49";                      // The default setting value information                         page 7
@@ -60,6 +60,7 @@ class INVERTER
 		String MUCHGC = "\x4D\x55\x43\x48\x47\x43"; // MUCHGC<mnn><cr>: Setting utility max charging current            pg 18
 		String POPM   = "\x50\x4F\x50\x4D";         // POPM<mn ><cr>: Set output mode (For 4K/5K)                       pg 18
 		String PPCP   = "\x50\x50\x43\x50";         // <MNN><cr>: Setting parallel device charger priority (For 4K/5K)  pg 18
+
     // Structure to store the data for QPIGS
     struct pipVals_t {
       uint32_t gridVoltage;             // xxx V   
@@ -84,7 +85,13 @@ class INVERTER
       uint32_t eepromVers;              // EEPROM version (2 numbers)
       uint32_t PV1_chargPower;          // PV1 Charging power (5 numbers)
       char deviceStatus2[4];            // Devide status 2
-
+      uint32_t bat_backToUtilityVolts;  // Setup voltage to stop using battery and back to GRID power
+      uint32_t bat_bulkChargeVolts;     // Setup voltage to 1st (elevation) and 2nd (Absorption) battery charge stages
+      uint32_t bat_FloatChargeVolts;    // Setup voltage to 3rd (Floating) battery charge stage
+      uint32_t bat_CutOffVolts;         // Minimum Limit voltage to discharge the Battery (used for % available battery calculation)
+      uint8_t OutPutPriority;           // 0: Utility first / 1: Solar first / 2: SBU first
+      uint8_t ChargerSourcePriority;    // 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar charging permitted
+      
     } pipVals;
 
     struct DevStatus_t 
@@ -179,22 +186,26 @@ class INVERTER
 
     
 	private:
-		String inverterData;
-		byte incomingdata;
     char _inverter_protocol;    // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
     HardwareSerial* hwStream;
     SoftwareSerial* swStream;
     Stream* _streamRef;
 
+		void store_QPIRI(String value);
 		void store_QPIGS(String value);
     void store_status();
     void store_status2();
-    int inverter_receive( String cmd, String& str_return );
-    int inverter_send ( String inv_command );
+    int inverter_receive( String cmd, String& str_return ); //  0 = successfull
+                                                            // -1 = No serial communication
+                                                            // -2 = Not recognized command
+                                                            
+    int inverter_send ( String inv_command );               //  0 = serial communication up and running
+                                                            // -1 = No serial communication
+                                                           
+    void ask_inverter_QPIRI( String& _result);    
 
-
-		int average_count;
-    uint32_t average_oldtime;
+		int _average_count;
+    uint32_t _average_oldtime;
 
     pipVals_t _pip_average;
     
