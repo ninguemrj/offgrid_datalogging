@@ -104,7 +104,7 @@ void setup() {
 
 //***** INVERTER ***************************************************
   // Informs INVERTER class which serial port to use when talking with solar inverter
-  inv.begin(2400);  
+  inv.begin(2400, 'B');  
 
 
 

@@ -12,9 +12,10 @@ class INVERTER
 	public:
     INVERTER( HardwareSerial& device) {hwStream = &device;}
     INVERTER( SoftwareSerial& device) {swStream = &device;}
-    void begin(uint32_t baudRate);
     
-    String POP_status;
+    void begin(uint32_t _baudRate, char _protocol); // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
+    
+    String _POP_status;
 		String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
 		String ACK = "\x41\x43\x4B";               // this message receiving on acknovledge of command
 
@@ -180,6 +181,7 @@ class INVERTER
 	private:
 		String inverterData;
 		byte incomingdata;
+    char _inverter_protocol;    // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
     HardwareSerial* hwStream;
     SoftwareSerial* swStream;
     Stream* _streamRef;

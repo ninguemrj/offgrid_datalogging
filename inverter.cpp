@@ -12,21 +12,23 @@
 
 
 
-void INVERTER::begin(uint32_t baudRate)
+void INVERTER::begin(uint32_t _baudRate, char _protocol) // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
 {
   if (hwStream)
   {
-    hwStream->begin(baudRate);
+    hwStream->begin(_baudRate);
   }
   else
   {
-    swStream->begin(baudRate);
+    swStream->begin(_baudRate);
   }
   _streamRef = !hwStream? (Stream*)swStream : hwStream;
 
   // Initialize POP control status flag
   POP_status = "";
   average_count = 0;
+  //--- sets how much fields from QPIGS
+  _inverter_protocol = _protocol;
   
   //--- For benchmarking the Solar inverter communication ---------------
   average_oldtime=millis();
@@ -113,18 +115,20 @@ void INVERTER::store_QPIGS(String value)
       
         val = strtok(0, " "); // Get the next value
         strcpy(_pip_average.deviceStatus, val);
-      
-        val = strtok(0, " "); // Get the next value
-        _pip_average.batOffsetFan = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        _pip_average.eepromVers = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        _pip_average.PV1_chargPower += atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        strcpy(_pip_average.deviceStatus2, String(val).substring(0,3).c_str());
+        
+        if ( _inverter_protocol == 'B')   // "B" = 22 fields from QPIGS
+        {
+          val = strtok(0, " "); // Get the next value
+          _pip_average.batOffsetFan = atoi(val);
+        
+          val = strtok(0, " "); // Get the next value
+          _pip_average.eepromVers = atoi(val);
+        
+          val = strtok(0, " "); // Get the next value
+          _pip_average.PV1_chargPower += atoi(val);
+        
+          val = strtok(0, " "); // Get the next value
+          strcpy(_pip_average.deviceStatus2, String(val).substring(0,3).c_str());        }
        }
    
       //--- Prepare counting for next array posotion -------------------------------
@@ -151,15 +155,21 @@ void INVERTER::store_QPIGS(String value)
         pipVals.PVPower                 = _pip_average.PVPower/10;
         pipVals.batterySCC              = _pip_average.batterySCC /10;
         pipVals.batteryDischargeCurrent = _pip_average.batteryDischargeCurrent/10;
-        pipVals.PV1_chargPower          = _pip_average.PV1_chargPower/10;
-        pipVals.batOffsetFan            = _pip_average.batOffsetFan;  // take the lastest read string
-        pipVals.eepromVers              = _pip_average.eepromVers;    // take the lastest read string
-        strcpy(pipVals.deviceStatus2, _pip_average.deviceStatus2);    // take the lastest read string
         strcpy(pipVals.deviceStatus,  _pip_average.deviceStatus);     // take the lastest read string
+
+        if ( _inverter_protocol == 'B')   // "B" = 22 fields from QPIGS
+        {
+          pipVals.PV1_chargPower          = _pip_average.PV1_chargPower/10;
+          pipVals.batOffsetFan            = _pip_average.batOffsetFan;  // take the lastest read string
+          pipVals.eepromVers              = _pip_average.eepromVers;    // take the lastest read string
+          strcpy(pipVals.deviceStatus2, _pip_average.deviceStatus2);    // take the lastest read string
+          
+          //--- Update status2 with latest read data from inverter ---------------------------
+          store_status2 ();
+        }
         
         //--- Update status with latest read data from inverter ---------------------------
         store_status ();
-        store_status2 ();
 
         //--- RESETs the _pip_average values to not accummulate the next readings with previous ones ----
         _pip_average.gridVoltage              = 0;
@@ -179,7 +189,11 @@ void INVERTER::store_QPIGS(String value)
         _pip_average.PVPower                  = 0;
         _pip_average.batterySCC               = 0;
         _pip_average.batteryDischargeCurrent  = 0;
-        _pip_average.PV1_chargPower           = 0;
+
+         if ( _inverter_protocol == 'B')   // "B" = 22 fields from QPIGS
+        {
+          _pip_average.PV1_chargPower           = 0;
+        }
 
 
 
@@ -238,10 +252,14 @@ void INVERTER::inverter_console_data()
   debugV("Battery SCC:.......... |%s| V"   , String(pipVals.batterySCC/100.00).c_str()); 
   debugV("Batt DischargeCurrent: |%d| A"   , pipVals.batteryDischargeCurrent); 
   debugV("DeviceStatus:......... |%s|"     , pipVals.deviceStatus);
-  debugV("Battery offset Fan:... |%d| V"   , pipVals.batOffsetFan);
-  debugV("EEPROM Version:....... |%d|"     , pipVals.eepromVers);
-  debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
-  debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
+  
+  if ( _inverter_protocol = 'B')   // "B" = 22 fields from QPIGS
+  {
+    debugV("Battery offset Fan:... |%d| V"   , pipVals.batOffsetFan);
+    debugV("EEPROM Version:....... |%d|"     , pipVals.eepromVers);
+    debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
+    debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
+  }
 }
 
 // ******************************************  CRC Functions  ******************************************
