@@ -7,12 +7,8 @@
 
 
 #include "inverter.h"
-#include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 
-
-
-
-void INVERTER::begin(uint32_t _baudRate, char _protocol) // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
+void INVERTER::begin(uint32_t _baudRate, char _protocol, uint8_t _verbose_begin) // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
 {
   if (hwStream)
   {
@@ -35,6 +31,9 @@ void INVERTER::begin(uint32_t _baudRate, char _protocol) // "A" = 18 fields from
   
   //--- For benchmarking the Solar inverter communication ---------------
   _average_oldtime=millis();
+
+  _VERBOSE_MODE = _verbose_begin;
+
 }
 
 void INVERTER::store_QPIRI(String value)
@@ -94,9 +93,6 @@ void INVERTER::store_QPIGS(String value)
   if (_average_count < 10)
   {
       //--- Accumulates readings from 0 to 9 ------------------------------------------
-      debugV ("Test countdown : %d", _average_count);
-
-
       if (value == "")
       {
         //--- QPIGS without data, skip this reading and wait next one -----------------  
@@ -250,14 +246,9 @@ void INVERTER::store_QPIGS(String value)
           _pip_average.PV1_chargPower           = 0;
         }
 
-
-
-
       //--- RESETs average counting -----------------------------------------------------
       _average_count = 0;  
   }
-  
-
 }
 
 void INVERTER::store_status ()
@@ -278,7 +269,6 @@ void INVERTER::store_status2 ()
 {
   char val[4];
   strcpy(val, pipVals.deviceStatus2);		// get the first value
-
   DevStatus2.changingFloatMode			 = val[0] ;		// 10: flag for charging to floating mode
   DevStatus2.SwitchOn       				 = val[1] ;		// b9: Switch On
   DevStatus2.dustProof			  	     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
@@ -286,39 +276,39 @@ void INVERTER::store_status2 ()
 
 void INVERTER::inverter_console_data()
 {
-  debugV("grid Voltage:......... |%d| V"   , pipVals.gridVoltage);
-  debugV("grid Frequency:....... |%s| Hz"  , String(pipVals.gridFrequency/10.0).c_str());
-  debugV("AC Output:............ |%d| V"   , pipVals.acOutput);
-  debugV("AC Frequency:......... |%s| Hz"  , String(pipVals.acFrequency/10.0).c_str());
-  debugV("AC ApparentPower:..... |%d| VA"  , pipVals.acApparentPower);
-  debugV("AC ActivePower:....... |%d| W"   , pipVals.acActivePower);
-  debugV("load Percent:......... |%d| %"   , pipVals.loadPercent);
-  debugV("bus Voltage:.......... |%d| V"   , pipVals.busVoltage); 
-  debugV("battery Voltage:...... |%s| V"   , String(pipVals.batteryVoltage/100.00).c_str());
-  debugV("battery ChargeCurrent: |%d| A"   , pipVals.batteryChargeCurrent); 
-  debugV("battery Charge:....... |%d| %"   , pipVals.batteryCharge); 
-  debugV("inverter Temperature:. |%d| C"   , pipVals.inverterTemperature); 
-  debugV("PV Current:........... |%s| A"   , String(pipVals.PVCurrent /10.0).c_str());
-  debugV("PV Voltage:........... |%s| V"   , String(pipVals.PVVoltage /10.0).c_str()); 
-  debugV("PV Power:............. |%s| W"   , String(pipVals.PVPower   /10.0).c_str());  
-  debugV("Battery SCC:.......... |%s| V"   , String(pipVals.batterySCC/100.00).c_str()); 
-  debugV("Batt DischargeCurrent: |%d| A"   , pipVals.batteryDischargeCurrent); 
-  debugV("DeviceStatus:......... |%s|"     , pipVals.deviceStatus);
+  Serial.println("Grid Voltage:......... |" + String(pipVals.gridVoltage) + "| V");
+  Serial.println("Grid Frequency:....... |" + String(pipVals.gridFrequency/10.0) + "| Hz");
+  Serial.println("AC Output:............ |" + String(pipVals.acOutput) + "| V");
+  Serial.println("AC Frequency:......... |" + String(pipVals.acFrequency/10.0) + "| Hz");
+  Serial.println("AC ApparentPower:..... |" + String(pipVals.acApparentPower) + "| VA");
+  Serial.println("AC ActivePower:....... |" + String(pipVals.acActivePower) + "| W");
+  Serial.println("Load Percent:......... |" + String(pipVals.loadPercent) + "| %");
+  Serial.println("Bus Voltage:.......... |" + String(pipVals.busVoltage) + "| V"); 
+  Serial.println("Battery Voltage:...... |" + String(pipVals.batteryVoltage/100.00)+ "| V");
+  Serial.println("Battery ChargeCurrent: |" + String(pipVals.batteryChargeCurrent) + "| A"); 
+  Serial.println("Battery Charge:....... |" + String(pipVals.batteryCharge) + "| %"); 
+  Serial.println("Inverter Temperature:. |" + String(pipVals.inverterTemperature) + "| C"); 
+  Serial.println("PV Current:........... |" + String(pipVals.PVCurrent /10.0)+ "| A");
+  Serial.println("PV Voltage:........... |" + String(pipVals.PVVoltage /10.0) + "| V"); 
+  Serial.println("PV Power:............. |" + String(pipVals.PVPower   /10.0) + "| W");  
+  Serial.println("Battery SCC:.......... |" + String(pipVals.batterySCC/100.00) + "| V"); 
+  Serial.println("Batt DischargeCurrent: |" + String(pipVals.batteryDischargeCurrent) + "| A"); 
+  Serial.println("DeviceStatus:......... |" + String(pipVals.deviceStatus) + "|");
   
   if ( _inverter_protocol = 'B')   // "B" = 22 fields from QPIGS
   {
-    debugV("Battery offset Fan:... |%d| V"   , pipVals.batOffsetFan);
-    debugV("EEPROM Version:....... |%d|"     , pipVals.eepromVers);
-    debugV("PV1 Charger Power:.... |%d| W"   , pipVals.PV1_chargPower);
-    debugV("DeviceStatus2:........ |%s|"     , pipVals.deviceStatus2);
+    Serial.println("Battery offset Fan:... |" + String(pipVals.batOffsetFan) + "| V");
+    Serial.println("EEPROM Version:....... |" + String(pipVals.eepromVers) + "|");
+    Serial.println("PV1 Charger Power:.... |" + String(pipVals.PV1_chargPower) + "| W");
+    Serial.println("DeviceStatus2:........ |" + String(pipVals.deviceStatus2) + "|");
   }
 
-  debugV("Bat Back to Grid:..... |%s| V"   , String(pipVals.bat_backToUtilityVolts/10.0).c_str()); 
-  debugV("Bat Bulk Charge:...... |%s| V"   , String(pipVals.bat_bulkChargeVolts/10.0).c_str()); 
-  debugV("Bat Float Charge:..... |%s| V"   , String(pipVals.bat_FloatChargeVolts/10.0).c_str()); 
-  debugV("Bat CutOff:........... |%s| V"   , String(pipVals.bat_CutOffVolts/10.0).c_str()); 
-  debugV("Output Priority:...... |%d| 0: Utility first / 1: Solar first / 2: SBU first"   , pipVals.OutPutPriority); 
-  debugV("Charging Priority:.... |%d| 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar"   , pipVals.ChargerSourcePriority); 
+  Serial.println("Bat Back to Grid:..... |" + String(pipVals.bat_backToUtilityVolts/10.0) + "| V"); 
+  Serial.println("Bat Bulk Charge:...... |" + String(pipVals.bat_bulkChargeVolts/10.0) + "| V"); 
+  Serial.println("Bat Float Charge:..... |" + String(pipVals.bat_FloatChargeVolts/10.0) + "| V"); 
+  Serial.println("Bat CutOff:........... |" + String(pipVals.bat_CutOffVolts/10.0) + "| V"); 
+  Serial.println("Output Priority:...... |" + String(pipVals.OutPutPriority) + "| 0: Utility first / 1: Solar first / 2: SBU first"); 
+  Serial.println("Charging Priority:.... |" + String(pipVals.ChargerSourcePriority) + "| 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar"); 
 }
 
 // ******************************************  CRC Functions  ******************************************
@@ -403,19 +393,20 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
       // checking Command not recognized 
       if (str_return == "(NAKss") 
       {
-        debugE("INVERTER: %s : Not recognized command: %s", cmd.c_str(), str_return.c_str());
+        Serial.println("INVERTER: " + cmd + ": Not recognized command: " + str_return);
         return -2;   
       }
 
       // TODO: TEST for CRC receipt match with calculated CRC
       
-      debugV("INVERTER: %s : Command executed successfully. Returned: %s", cmd.c_str(), str_return.c_str());
+      if (_VERBOSE_MODE == 1)
+        Serial.println("INVERTER: " + cmd + ": Command executed successfully. Returned: " + str_return);
       return 0;
     }
     else
     {
       // No serial communication
-      debugE("INVERTER: %s : No serial communication", cmd.c_str());
+      Serial.println("INVERTER: " + cmd + ": No serial communication");
       str_return = "";
    	  return -1;
 	  }
@@ -432,13 +423,11 @@ void INVERTER::ask_inverter_QPIRI( String& _result)
         // checking return string lengh for QPIRI command 
         if (strlen(_result.c_str()) < 85)       
         {
-          debugE("INVERTER: QPIRI: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+          Serial.println("INVERTER: QPIRI: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
           _result = "";                                    // clear the string result from inverter as it is not complete
           _funct_return = -1;                              // short string lengh for QPIRI command 
         }
       }
-//      store_QPIGS(_result.c_str());                    // store in pipVals the inverter response or nothing.
-//      return (int)_funct_return;    
   }
 
 int INVERTER::ask_inverter_data()
@@ -448,16 +437,18 @@ int INVERTER::ask_inverter_data()
       _funct_return = inverter_receive(QPIGS, _result);
       if (_funct_return == 0) 
       {
-        debugV("INVERTER: QPIGS: Receipt string size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+        if (_VERBOSE_MODE == 1)
+          Serial.println("INVERTER: QPIGS: Receipt string size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+        
         // checking return string lengh for QPIGS command 
         if (strlen(_result.c_str()) < 85)       
         {
-          debugE("INVERTER: QPIGS: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_result.c_str()), _result.c_str());
+          Serial.println("INVERTER: QPIGS: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
           _result = "";                                  // clear the string result from inverter as it is not complete
           _funct_return = -1;                            // short string lengh for QPIGS command 
         }
       }
-      store_QPIGS(_result.c_str());                      // average and store in pipVals the inverter response or nothing.
+      store_QPIGS(_result.c_str());                      // accumulates, average and store in pipVals the inverter response or nothing.
 
       // Ask Inverer for QPIRI configuration in the 10th QPIGS reading (0 to 9)
       // (when the averaged amount will be stored in the public variables)
@@ -471,11 +462,12 @@ int INVERTER::ask_inverter_data()
         store_QPIRI(_QPIRI_result);
 
         //--- For benchmarking the averaged Solar inverter communication ---------------------------      
-        debugA ("Time to calculate the average %d, count = %d", (millis() - _average_oldtime), _average_count);
+        if (_VERBOSE_MODE == 1)
+          Serial.println ("Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
+
+        // prepare for a new banchmarck
         _average_oldtime = millis();
-        
       }
-      
       return (int)_funct_return;    
     }
 
@@ -504,13 +496,13 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP01, _resultado) == 0)                   
           {
-             debugA("INVERTER: POP01: command executed successfully. Returned: |%s|", _resultado.c_str());
+             Serial.println ("--INFO: INVERTER: POP01: Output Priority set to Solar/Grid/Battery");
              _POP_status = POP01;
           }
           else
           {
              // Needs to treat errors for better error messages
-             debugA("INVERTER: POP01: Error executing the command! Returned: |%s|", _resultado.c_str());       
+             Serial.println("-- ERROR: INVERTER: POP01: Failed to set Output Priority to Solar/Grid/Battery. Inverter Returned: " + _resultado);       
           }
         }
       }
@@ -530,13 +522,13 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP02, _resultado) == 0)                   
           {
-             debugA("INVERTER: POP02: command executed successfully. Returned: |%s|", _resultado.c_str());
+             Serial.println ("--INFO: INVERTER: POP02: Output Priority set to Solar/Battery/Grid");
              _POP_status = POP02;
           }
           else
           {
             // Needs to treat errors for better error messages
-             debugA("INVERTER: POP02: Error executing the command! Returned: |%s|", _resultado.c_str());       
+             Serial.println("-- ERROR: INVERTER: POP02: Failed to set Output Priority to Solar/Battery/Grid. Inverter Returned: " + _resultado);       
           }
         }
       }

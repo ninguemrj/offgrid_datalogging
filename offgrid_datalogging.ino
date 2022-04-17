@@ -1,6 +1,4 @@
-//#define DEBUG_DISABLED true
-//#define DEBUG_INITIAL_LEVEL DEBUG_LEVEL_VERBOSE   
-
+#define VERBOSE_MODE 0     // 0 = none  / 1 = Debug
 /*
   offgrid_datalogging
   -------------------
@@ -65,7 +63,8 @@ TO DO LIST:
 /// RTC
 static DS1307 RTC;
 
-/// Personel INVERTER class
+//***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
+// Change this argument to the SERIAL actualy used to communicates with the inverter
 static INVERTER inv(Serial3);
 
 
@@ -81,30 +80,22 @@ void setup() {
   delay(500); // Wait a time
   Serial.println(); // To not stay in end of dirty chars in boot
 
-  debugA("**** Setup: initializing ...");
+  Serial.println("**** Setup: initializing ...");
 
 //***** RTC ***************************************************
   RTC.begin();
 
   if (!RTC.isRunning())
   {
-    debugE("Real Time Clock not working!");
+    Serial.println("-- ERROR: Real Time Clock not working!");
   }
 // Pending ...
 // Present start time as debugA
 
 
 
-//***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
-  
-//  Serial3.begin(2400);
-//  Serial3.setTimeout(800);
-// Pending ...
-// Check and present Serial3 status
-
-//***** INVERTER ***************************************************
-  // Informs INVERTER class which serial port to use when talking with solar inverter
-  inv.begin(2400, 'B');  
+// Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
+  inv.begin(2400, 'B', VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
 
 
 
@@ -117,12 +108,12 @@ void setup() {
     
 //***** SD Card  ***************************************************
 // Pending ...
-// Check if SD card is present (on loop too, debugE if not)
-// Check if SD card is writable (on loop too, debugE if not)
+// Check if SD card is present 
+// Check if SD card is writable
 
 
 //***** SETUP END
-  debugA("**** Setup: initialized.");
+  Serial.println("**** Setup: initialized.");
 }
 
 
@@ -133,52 +124,27 @@ void loop()
 {
   int returned_code = 0;
   
-  // stemp for testing pourposes only, it will be remeved later
-  //String stemp = "";
-
-  //--- SERIAL DEBUGGER Handle ---------------
-  debugHandle();
-
-  //--- For benchmarking the Solar inverter communication ---------------
-  oldtime=millis();
-
-  //--- Ask the Solar inverter for information ---------------
-  //TO DO: function "askInverter": Test the feedback string before returning the response string
-  //stemp = askInverter(QPIGS);
-
-  //// request QPIGS data from inverter  /////////////////////////////////////////////
+  //// request QPIGS and QPIRI data from inverter  /////////////////////////////////////////////
   returned_code = inv.ask_inverter_data();
-  if (returned_code == 0)                 
+  if (returned_code != 0)                 
   {
-    debugV("INVERTER: DATA: Successfully.");
-  }
-  else
-  {
-    debugE("INVERTER: DATA: Error executing the command! Erro code: %d", returned_code);        
+    Serial.println("-- ERROR: INVERTER: Error executing 'ask_inverter_data' function! Erro code:" + String(returned_code));        
   }
 
   // print pipVals on serial port only on VERBOSE mode
-  inv.inverter_console_data();                     
+  if(inv.pipVals.acOutput != 0)
+    inv.inverter_console_data();                     
 
-  //// changes inverter settings considering some rules  /////////////////////////////
-  returned_code = inv.handle_inverter_automation(19, 23);
-  if (returned_code == 0)
-  {
-     debugV("INVERTER: Automation Successfully.");
-  }
-  else
-  {
-     debugE("INVERTER: Automation Error! Error code: %d", returned_code);        
-  }   
-  
-  // Split the feedback string into meaningfull variables and generate debug (verbose ON) info on serial monitor
-  //handleQPIGSfeedback(stemp);
-
-
-//  Serial.print("Time spent on LOOP: ");
-//  Serial.print(millis() - oldtime);
-//  Serial.println("ms");
-  //Serial.println(inv.pipVals.gridFrequency);
+  ////////////////////////////////////////////////////////////////////////////////////
+  // AUTOMATION SETTINGS:
+  //
+  // Use inverter information and hour/minutes to change 
+  // inverter settings considering inverter class rules
+  // Uncomment it to use it
+  ////////////////////////////////////////////////////////////////////////////////////
+//  if (inv.handle_inverter_automation(19, 23) != 0) 
+//    Serial.println("-- ERROR: INVERTER: Automation Error! Error code: " + String(returned_code));        
+    
   
 }
 
