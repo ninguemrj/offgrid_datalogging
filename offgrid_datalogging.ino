@@ -54,14 +54,14 @@ TO DO LIST:
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
 #include "Inverter.h"
 #include <Wire.h>
-#include <RTC.h>
+#include "RTClib.h"
 
 
 
 ////// Variable ///////////////////////////////////////////////////////////////////////////////////
 
 /// RTC
-static DS1307 RTC;
+RTC_DS1307 rtc;
 
 //***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
 // Change this argument to the SERIAL actualy used to communicates with the inverter
@@ -83,16 +83,16 @@ void setup() {
   Serial.println("**** Setup: initializing ...");
 
 //***** RTC ***************************************************
-  RTC.begin();
-
-  if (!RTC.isRunning())
-  {
-    Serial.println("-- ERROR: Real Time Clock not working!");
+  if (! rtc.begin()) {
+    Serial.println("--ERROR: Couldn't find RTC shield.");
   }
-// Pending ...
-// Present start time as debugA
 
+  if (! rtc.isrunning()) {
+    Serial.println("--WARNING: RTC is NOT running, check RTC battery!");
 
+    //Set compiling data and time if not set
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
 
 // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
   inv.begin(2400, 'B', VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
@@ -123,9 +123,11 @@ void setup() {
 void loop()
 {
   int returned_code = 0;
+  DateTime now = rtc.now();
+
   
   //// request QPIGS and QPIRI data from inverter  /////////////////////////////////////////////
-  returned_code = inv.ask_inverter_data();
+  returned_code = inv.ask_inverter_data(now.unixtime());
   if (returned_code != 0)                 
   {
     Serial.println("-- ERROR: INVERTER: Error executing 'ask_inverter_data' function! Erro code:" + String(returned_code));        

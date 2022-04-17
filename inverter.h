@@ -63,6 +63,7 @@ class INVERTER
 
     // Structure to store the data for QPIGS
     struct pipVals_t {
+      uint32_t _unixtime;
       uint32_t gridVoltage;             // xxx V   
       uint32_t gridFrequency;           // xx.xx Hz  * 10
       uint32_t acOutput;                // xxx V   
@@ -182,7 +183,7 @@ class INVERTER
 		
     void inverter_console_data();
     int handle_inverter_automation(int _hour, int _min);
-    int ask_inverter_data();
+    int ask_inverter_data(uint32_t _now);
 
     
 	private:

@@ -276,6 +276,7 @@ void INVERTER::store_status2 ()
 
 void INVERTER::inverter_console_data()
 {
+  Serial.println("UNIX TIME:............ |" + String(pipVals._unixtime) + "| Epoch");
   Serial.println("Grid Voltage:......... |" + String(pipVals.gridVoltage) + "| V");
   Serial.println("Grid Frequency:....... |" + String(pipVals.gridFrequency/10.0) + "| Hz");
   Serial.println("AC Output:............ |" + String(pipVals.acOutput) + "| V");
@@ -430,7 +431,7 @@ void INVERTER::ask_inverter_QPIRI( String& _result)
       }
   }
 
-int INVERTER::ask_inverter_data()
+int INVERTER::ask_inverter_data(uint32_t _now)
     {
       int _funct_return = 0;
       String _result = "";
@@ -454,8 +455,13 @@ int INVERTER::ask_inverter_data()
       // (when the averaged amount will be stored in the public variables)
       if (_average_count == 9)
       {
+        // Sets provided unixtime as argument for the calculated averaged 10 readings
+        pipVals._unixtime = _now;
+        
+        // Reads QPIRI command to check battery configurations
+        // TODO: Read all QPIRI fields
+        
         String _QPIRI_result;
-        // Ask Inverer for QPIRI
         ask_inverter_QPIRI(_QPIRI_result);
 
         // store QPIRI info
