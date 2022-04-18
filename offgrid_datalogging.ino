@@ -1,3 +1,4 @@
+#define VERBOSE_MODE 0     // 0 = none  / 1 = Debug
 /*
   offgrid_datalogging
   -------------------
@@ -48,48 +49,24 @@ TO DO LIST:
 
 ///// Includes ///////////////////////////////////////////////////////////////////////////////////
 
-#define DEBUG_DISABLED false
-//#define DEBUG_INITIAL_LEVEL DEBUG_LEVEL_VERBOSE   
 
 #include "Arduino.h"
 #include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
+#include "Inverter.h"
 #include <Wire.h>
-#include <RTC.h>
+#include "RTClib.h"
 
 
 
 ////// Variable ///////////////////////////////////////////////////////////////////////////////////
 
 /// RTC
-static DS1307 RTC;
+RTC_DS1307 rtc;
 
+//***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
+// Change this argument to the SERIAL actualy used to communicates with the inverter
+static INVERTER inv(Serial3);
 
-/// Comandos do inversor
-String QPIGS = "\x51\x50\x49\x47\x53\xB7\xA9\x0D";
-String QMOD = "\x51\x4D\x4F\x44\x96\x1F\x0D";
-String QDI = "\x51\x44\x49\x71\x1B\x0D";
-
-/// Storing data from solar inverter
-String acIn_volts="";
-String acIn_freq="";
-String acOut_volts="";
-String acOut_freq="";
-String acOut_va="";
-String acOut_watts="";
-String acOut_loadPerc="";
-String dcBat_volts="";
-String dcBat_chargAmp="";
-String dcBat_capPerc="";
-String inv_heatSink="";
-String pvIn_amp="";
-String pvIn_volts="";
-String dcBat_voltsSCC="";
-String dcBat_dischargAmp="";
-String inv_status1="";
-String unknown1="";
-String unknown2="";
-String pvIn_chargPower="";
-String inv_status2="";
 
 /// Benchmark
 uint32_t oldtime = 0;
@@ -103,26 +80,23 @@ void setup() {
   delay(500); // Wait a time
   Serial.println(); // To not stay in end of dirty chars in boot
 
-  debugA("**** Setup: initializing ...");
+  Serial.println("**** Setup: initializing ...");
 
 //***** RTC ***************************************************
-  RTC.begin();
-
-  if (!RTC.isRunning())
-  {
-    debugE("Real Time Clock not working!");
+  if (! rtc.begin()) {
+    Serial.println("--ERROR: Couldn't find RTC shield.");
   }
-// Pending ...
-// Present start time as debugA
 
+  if (! rtc.isrunning()) {
+    Serial.println("--WARNING: RTC is NOT running, check RTC battery!");
 
+    //Set compiling data and time if not set
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
 
-//***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
-  
-  Serial3.begin(2400);
-  Serial3.setTimeout(800);
-// Pending ...
-// Check and present Serial3 status
+// Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
+  inv.begin(2400, 'B', VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
+
 
 
 //***** WIFI Connection ***************************************************
@@ -134,12 +108,12 @@ void setup() {
     
 //***** SD Card  ***************************************************
 // Pending ...
-// Check if SD card is present (on loop too, debugE if not)
-// Check if SD card is writable (on loop too, debugE if not)
+// Check if SD card is present 
+// Check if SD card is writable
 
 
 //***** SETUP END
-  debugA("**** Setup: initialized.");
+  Serial.println("**** Setup: initialized.");
 }
 
 
@@ -148,124 +122,35 @@ void setup() {
 
 void loop()
 {
-  // stemp for testing pourposes only, it will be remeved later
-  String stemp = "";
+  int returned_code = 0;
+  DateTime now = rtc.now();
 
-  //--- SERIAL DEBUGGER Handle ---------------
-  debugHandle();
-
-  //--- For benchmarking the Solar inverter communication ---------------
-  oldtime=millis();
-
-  //--- Ask the Solar inverter for information ---------------
-  //TO DO: function "askInverter": Test the feedback string before returning the response string
-  stemp = askInverter(QPIGS);
   
-  // Split the feedback string into meaningfull variables and generate debug (verbose ON) info on serial monitor
-  handleQPIGSfeedback(stemp);
-
-
-  Serial.print(millis() - oldtime);
-  Serial.println(" milisegundos");
-  
-}
-
-////// Setup ///////////////////////////////////////////////////////////////////////////////////
-
-//***** ask solar inverter for data ***************************************************
-
-String askInverter(String cmd){
-    String result;
-
-    Serial3.print(cmd);
-    result = Serial3.readStringUntil('\r');
-//    Serial.println(result);
-//    debugV("Reposta inversor: %s", result);  // STRING NOT PRINTED CORRECTLY
-  
-  return result;
+  //// request QPIGS and QPIRI data from inverter  /////////////////////////////////////////////
+  returned_code = inv.ask_inverter_data(now.unixtime());
+  if (returned_code != 0)                 
+  {
+    Serial.println("-- ERROR: INVERTER: Error executing 'ask_inverter_data' function! Erro code:" + String(returned_code));        
   }
 
+  // print pipVals on serial port only on VERBOSE mode
+  if(inv.pipVals.acOutput != 0)
+    inv.inverter_console_data();                     
 
-
-void handleQPIGSfeedback(String stringOne) {
-
-// QPIGS response mapping
-//                                1         2         3         4         5         6         7         8         9         10 
-//                      01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789 
-//  String stringOne = "(213.9 60.0 219.8 59.9 0373 0359 010 375 25.50 000 095 0038 00.0 109.2 00.00 00017 01010110 00 00 00000 110$";
-//  data field numbers:   1     2     3    4    5     6   7   8    9    10  11  12   13   14    15     16     17    18 19   20  21 CRC
-
-  //1
-  acIn_volts = stringOne.substring(1, 6);
-  //2
-  acIn_freq = stringOne.substring(7, 11 );
-  //3
-  acOut_volts = stringOne.substring(12, 17);
-  //4
-  acOut_freq = stringOne.substring(18, 22);
-  //5
-  acOut_va = stringOne.substring(23, 27);
-  //6
-  acOut_watts = stringOne.substring(28, 32);
-  //7
-  acOut_loadPerc = stringOne.substring(33, 36);
-  //8 Ignored
-  //9
-  dcBat_volts = stringOne.substring(41, 46);
-  //10 Solar inverter may have 2 or 3 digits in this information depending on MPPT+Utility charger current. Mine have 3 digits (100A).
-  dcBat_chargAmp = stringOne.substring(47, 50);
-  //11
-  dcBat_capPerc = stringOne.substring(51, 54);
-  //12
-  inv_heatSink = stringOne.substring(55, 59);
-  //13
-  pvIn_amp = stringOne.substring(60, 64);
-  //14
-  pvIn_volts = stringOne.substring(65, 70);
-  //15
-  dcBat_voltsSCC = stringOne.substring(71, 76);
-  //16
-  dcBat_dischargAmp = stringOne.substring(77, 82);
-  //17
-  inv_status1 = stringOne.substring(83, 91);
-  //18
-  unknown1 = stringOne.substring(92, 94);
-  //19
-  unknown2 = stringOne.substring(95, 97);
-  //20
-  pvIn_chargPower = stringOne.substring(98, 103);
-  //21
-  inv_status2 = stringOne.substring(104, 107);
-
-// Only prints if VERBOSE is enabled
+  ////////////////////////////////////////////////////////////////////////////////////
+  // AUTOMATION SETTINGS:
+  //
+  // Use inverter information and hour/minutes to change 
+  // inverter settings considering inverter class rules
+  // Uncomment it to use it
+  ////////////////////////////////////////////////////////////////////////////////////
+//  if (inv.handle_inverter_automation(19, 23) != 0) 
+//    Serial.println("-- ERROR: INVERTER: Automation Error! Error code: " + String(returned_code));        
     
-    debugV("AC IN Volts: |%s|",acIn_volts);
-    debugV("AC IN Frequency (Hz): |%s|", acIn_freq);
-    debugV("AC OUT Volts: |%s|", acOut_volts);
-    debugV("AC OUT Frequency (Hz): |%s|", acOut_freq);
-    debugV("AC OUT Apparent Power (va): |%s|",acOut_va);
-    debugV("AC OUT Active Power (w): |%s|", acOut_watts);
-    debugV("AC OUT Load (%): |%s|", acOut_loadPerc);
-    debugV("DC Battery tensao: |%s|", dcBat_volts);
-    debugV("DC Battery Charging Current (A): |%s|", dcBat_chargAmp);
-    debugV("DC Battery Capacity (%): |%s|", dcBat_capPerc);
-    debugV("Heat Sink Temperature (Celcius): |%s|", inv_heatSink);
-    debugV("PV IN Current (A): |%s|", pvIn_amp);
-    debugV("PV IN Volts : |%s|", pvIn_volts);
-    debugV("DC Battery volts (SCC): |%s|", dcBat_voltsSCC);
-    debugV("DC Battery Discharging Current (A): |%s|", dcBat_dischargAmp);
-    debugV("Inverter Status: |%s|", inv_status1);
-    debugV("unknown1: |%s|", unknown1);
-    debugV("unknown2: |%s|", unknown2);
-    debugV("PV IN Charging Power: |%s|", pvIn_chargPower);
-    debugV("Status - Charging to Floating mode: |%s|", inv_status2.substring(0, 1));
-    debugV("Status - Switch On: |%s|", inv_status2.substring(1, 2));
-    debugV("Status - Dustproof: |%s|", inv_status2.substring(2, 3));
-
+  
 }
 
-
-
+////// FUNCTIONS ///////////////////////////////////////////////////////////////////////////////////
 
 
 /////////// End
