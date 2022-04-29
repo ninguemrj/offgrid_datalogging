@@ -1,5 +1,10 @@
 #define VERBOSE_MODE 1     // 0 = none  / 1 = Debug
 
+/////////////////////////////////
+// URGENT
+// DATE for SD filename not updated
+// SD writing on loop without time delay
+/////////////////////////////////////
 /*
   offgrid_datalogging
   -------------------
