@@ -1,14 +1,20 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Arduino thread about communicating with the solar inverter: https://forum.arduino.cc/t/rs232-read-data-from-mpp-solar-inverter/600960/72
-// Thanks for "athersaleem", "DanX3", "sibianul", "Larryl79" and my other that shared their knowledge and finds in the Arduino forum.
-// Version 1.0 written by Larryl79 (https://github.com/larryl79/Inverter-Communicator)
-// Version 2.0 Copied and changed to fit the Ricardo Jr´s project (https://github.com/ninguemrj/offgrid_datalogging/)
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**********************************************************************************************************************
+ * 
+ * Arduino thread about communicating with the solar PV_INVERTER: https://forum.arduino.cc/t/rs232-read-data-from-mpp-solar-PV_INVERTER/600960/72
+ * Thanks for "athersaleem", "DanX3", "sibianul", "Larryl79" and my other that shared their knowledge and finds in the Arduino forum.
+ * Version 1.0 written by Larryl79 (https://github.com/larryl79/PV-Inverter-Communicator)
+ * Version 2.0 Copied and changed to fit the Ricardo Jr´s project (https://github.com/ninguemrj/offgrid_datalogging/)
+ * 
+ * Contributors: Larryl79, Richardo Jr ( NiguemJr )
+ * 
+ ************************************************************************************************************************/
 
+#include "PVinverter.h"
 
-#include "inverter.h"
+////////// Date and time function for error mesages //////////
+extern String _errorDateTime();
 
-void INVERTER::begin(uint32_t _baudRate, char _protocol, uint8_t _verbose_begin) // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
+void PV_INVERTER::begin(uint32_t _baudRate, char _protocol, uint8_t _verbose_begin) // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
 {
   if (hwStream)
   {
@@ -29,14 +35,50 @@ void INVERTER::begin(uint32_t _baudRate, char _protocol, uint8_t _verbose_begin)
   //--- sets how much fields from QPIGS
   _inverter_protocol = _protocol;
   
-  //--- For benchmarking the Solar inverter communication ---------------
+  //--- For benchmarking the Solar PV_INVERTER communication ---------------
   _average_oldtime=millis();
 
   _VERBOSE_MODE = _verbose_begin;
 
+
+  pipVals.gridVoltage              = 0;
+  pipVals.gridFrequency            = 0;
+  pipVals.acOutput                 = 0;
+  pipVals.acFrequency              = 0;
+  pipVals.acApparentPower          = 0;
+  pipVals.acActivePower            = 0;
+  pipVals.loadPercent              = 0;
+  pipVals.busVoltage               = 0;
+  pipVals.batteryVoltage           = 0;
+  pipVals.batteryChargeCurrent     = 0;
+  pipVals.batteryCharge            = 0;
+  pipVals.inverterTemperature      = 0;
+  pipVals.PVCurrent                = 0;
+  pipVals.PVVoltage                = 0;
+  pipVals.PVPower                  = 0;
+  pipVals.batterySCC               = 0;
+  pipVals.batteryDischargeCurrent  = 0;
+  pipVals.deviceStatus[0]          = '0';
+  pipVals.deviceStatus[1]          = '0';
+  pipVals.deviceStatus[2]          = '0';
+  pipVals.deviceStatus[3]          = '0';
+  pipVals.deviceStatus[4]          = '0';
+  pipVals.deviceStatus[5]          = '0';
+  pipVals.deviceStatus[6]          = '0';
+  pipVals.deviceStatus[7]          = '0';
+  if ( _inverter_protocol == 'B')   // "B" = 22 fields from QPIGS
+  {
+    pipVals.batOffsetFan            = 0;
+    pipVals.eepromVers               = 0;
+    pipVals.PV1_chargPower           = 0;
+    pipVals.deviceStatus2[0]         = '0';
+    pipVals.deviceStatus2[1]         = '0';
+    pipVals.deviceStatus2[2]         = '0';
+  }
+
 }
 
-void INVERTER::store_QPIRI(String value)
+void PV_INVERTER::store_QPIRI(String value)
 {
   if (value == "")
   {
@@ -50,7 +92,7 @@ void INVERTER::store_QPIRI(String value)
   }
   else
   {
-     //--- Update status with data from inverter  ---------------------------------  
+     //--- Update status with data from PV_INVERTER  ---------------------------------  
     char pipInputBuf[200];
     char *val;
     
@@ -88,7 +130,7 @@ void INVERTER::store_QPIRI(String value)
 
 }
 
-void INVERTER::store_QPIGS(String value)
+void PV_INVERTER::store_QPIGS(String value)
 {
   if (_average_count < 10)
   {
@@ -96,11 +138,12 @@ void INVERTER::store_QPIGS(String value)
       if (value == "")
       {
         //--- QPIGS without data, skip this reading and wait next one -----------------  
-         _average_count--;  
+
+        _average_count--;  
       }
       else
       {
-         //--- Update status with data from inverter  ---------------------------------  
+         //--- Update status with data from PV_INVERTER  ---------------------------------  
         char pipInputBuf[500];
         char *val;
         
@@ -156,7 +199,7 @@ void INVERTER::store_QPIGS(String value)
         val = strtok(0, " "); // Get the next value
         _pip_average.PVVoltage += atof(val)*10;
       
-        _pip_average.PVPower += (_pip_average.PVVoltage/10) * (_pip_average.PVCurrent/10) * 10; // Calculate PV Power
+//        _pip_average.PVPower += (_pip_average.PVVoltage/10) * (_pip_average.PVCurrent/10) * 10; // Calculate PV Power
       
         val = strtok(0, " "); // Get the next value
         _pip_average.batterySCC += atof(val)*100;
@@ -203,7 +246,7 @@ void INVERTER::store_QPIGS(String value)
         pipVals.inverterTemperature     = _pip_average.inverterTemperature/10;
         pipVals.PVCurrent               = _pip_average.PVCurrent/10;
         pipVals.PVVoltage               = _pip_average.PVVoltage/10;
-        pipVals.PVPower                 = _pip_average.PVPower/10;
+        pipVals.PVPower                 = _pip_average.PVCurrent/10 * _pip_average.PVVoltage/10 /10;
         pipVals.batterySCC              = _pip_average.batterySCC /10;
         pipVals.batteryDischargeCurrent = _pip_average.batteryDischargeCurrent/10;
         strcpy(pipVals.deviceStatus,  _pip_average.deviceStatus);     // take the lastest read string
@@ -214,13 +257,13 @@ void INVERTER::store_QPIGS(String value)
           pipVals.batOffsetFan            = _pip_average.batOffsetFan;  // take the lastest read string
           pipVals.eepromVers              = _pip_average.eepromVers;    // take the lastest read string
           strcpy(pipVals.deviceStatus2, _pip_average.deviceStatus2);    // take the lastest read string
-          
-          //--- Update status2 with latest read data from inverter ---------------------------
+        
+          //--- Update status2 with latest read data from PV_INVERTER ---------------------------
           store_status2 ();
         }
         
-        //--- Update status with latest read data from inverter ---------------------------
-        store_status ();
+        //--- Update status with latest read data from PV_INVERTER ---------------------------
+       store_status ();
 
         //--- RESETs the _pip_average values to not accummulate the next readings with previous ones ----
         _pip_average.gridVoltage              = 0;
@@ -251,9 +294,9 @@ void INVERTER::store_QPIGS(String value)
   }
 }
 
-void INVERTER::store_status ()
+void PV_INVERTER::store_status ()
 {
-  char val[8];
+  char val[9];
   strcpy(val, pipVals.deviceStatus);		// get the first value
   DevStatus.SBUpriority      = val[0];
   DevStatus.ConfigStatus     = val[1];		// configuration status: 1: Change 0: unchanged b6
@@ -265,7 +308,7 @@ void INVERTER::store_status ()
   DevStatus.ACcharge         = val[7];      // b0: Charging status(AC charging on/off)
 }
 
-void INVERTER::store_status2 ()
+void PV_INVERTER::store_status2 ()
 {
   char val[4];
   strcpy(val, pipVals.deviceStatus2);		// get the first value
@@ -274,7 +317,7 @@ void INVERTER::store_status2 ()
   DevStatus2.dustProof			  	     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
 }
 
-void INVERTER::inverter_console_data()
+void PV_INVERTER::inverter_console_data()
 {
   Serial.println("UNIX TIME:............ |" + String(pipVals._unixtime) + "| Epoch");
   Serial.println("Grid Voltage:......... |" + String(pipVals.gridVoltage) + "| V");
@@ -288,7 +331,7 @@ void INVERTER::inverter_console_data()
   Serial.println("Battery Voltage:...... |" + String(pipVals.batteryVoltage/100.00)+ "| V");
   Serial.println("Battery ChargeCurrent: |" + String(pipVals.batteryChargeCurrent) + "| A"); 
   Serial.println("Battery Charge:....... |" + String(pipVals.batteryCharge) + "| %"); 
-  Serial.println("Inverter Temperature:. |" + String(pipVals.inverterTemperature) + "| C"); 
+  Serial.println("PV_INVERTER Temperature:. |" + String(pipVals.inverterTemperature) + "| C"); 
   Serial.println("PV Current:........... |" + String(pipVals.PVCurrent /10.0)+ "| A");
   Serial.println("PV Voltage:........... |" + String(pipVals.PVVoltage /10.0) + "| V"); 
   Serial.println("PV Power:............. |" + String(pipVals.PVPower   /10.0) + "| W");  
@@ -313,7 +356,7 @@ void INVERTER::inverter_console_data()
 }
 
 // ******************************************  CRC Functions  ******************************************
-uint16_t INVERTER::crc_xmodem_update (uint16_t crc, uint8_t data)
+uint16_t PV_INVERTER::crc_xmodem_update (uint16_t crc, uint8_t data)
 {
   int i;
   crc = crc ^ ((uint16_t)data << 8);
@@ -326,7 +369,7 @@ uint16_t INVERTER::crc_xmodem_update (uint16_t crc, uint8_t data)
 return crc;
 }
 
-uint16_t INVERTER::calc_crc(char *msg, int n)
+uint16_t PV_INVERTER::calc_crc(char *msg, int n)
 {
 // See bottom of this page: http://www.nongnu.org/avr-libc/user-manual/group__util__crc.html
 // Polynomial: x^16 + x^12 + x^5 + 1 (0x1021)
@@ -340,13 +383,13 @@ uint16_t INVERTER::calc_crc(char *msg, int n)
       return(x);
 }
 
-// ******************************************  inverter communication  *********************************
+// ******************************************  PV_INVERTER communication  *********************************
 
-int INVERTER::inverter_send(String inv_command)
+bool PV_INVERTER::inverter_send(String inv_command)
 {
 	_streamRef->print("QRST\r");  //  knock-knock for communiction exist
 	_streamRef->flush();          // Wait finishing transmitting before going on...
-	if (_streamRef->readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
+	if (_streamRef->readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from PV_INVERTER on serial port.
 	{
  /* 		uint16_t vgCrcCheck;
   		int vRequestLen = 0;
@@ -361,7 +404,7 @@ int INVERTER::inverter_send(String inv_command)
   		//Calculating CRC
   		vgCrcCheck = calc_crc(vRequestArray,vRequestLen);
   
-  		// CRC returns two characters - these need to be separated and send as HEX to Inverter
+  		// CRC returns two characters - these need to be separated and send as HEX to PV_INVERTER
   		String vgCrcCheckString = String(vgCrcCheck, HEX);
   		String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
   			
@@ -374,64 +417,64 @@ int INVERTER::inverter_send(String inv_command)
  
 */
       inv_command += "\x0D";     // add CR
-  		//Sending Request to inverter
+  		//Sending Request to PV_INVERTER
   		_streamRef->print(inv_command);
   		_streamRef->flush();          // Wait finishing transmitting before going on...
   }
   else
   {
-		return -1; // No serial communication
+		return false; // No serial communication
   }
-   return 0; // NAKss returned, serial communication up and running
+   return true; // NAKss returned, serial communication up and running
 }
 
-int INVERTER::inverter_receive( String cmd, String& str_return )
+uint8_t PV_INVERTER::inverter_receive( String cmd, String& str_return )
 {
-  if ( inverter_send(cmd)==0 )
+  if ( inverter_send(cmd))
     {
       str_return = _streamRef->readStringUntil('\x0D');
       
       // checking Command not recognized 
       if (str_return == "(NAKss") 
       {
-        Serial.println("INVERTER: " + cmd + ": Not recognized command: " + str_return);
-        return -2;   
+        Serial.println(_errorDateTime() + "PV_INVERTER: " + cmd + ": Not recognized command: " + str_return);
+        return 2;   
       }
 
       // TODO: TEST for CRC receipt match with calculated CRC
       
       if (_VERBOSE_MODE == 1)
-        Serial.println("INVERTER: " + cmd + ": Command executed successfully. Returned: " + str_return);
+        Serial.println(_errorDateTime() + "PV_INVERTER: " + cmd + ": Command executed successfully. Returned: " + str_return);
       return 0;
     }
     else
     {
       // No serial communication
-      Serial.println("INVERTER: " + cmd + ": No serial communication");
+      Serial.println(_errorDateTime() + "PV_INVERTER: " + cmd + ": No serial communication");
       str_return = "";
-   	  return -1;
+   	  return 1;
 	  }
     
 }
 
-void INVERTER::ask_inverter_QPIRI( String& _result)
+void PV_INVERTER::ask_inverter_QPIRI( String& _result)
   {
-      int _funct_return = 0;
+//      int _funct_return = 0;
       _result = "";
-      _funct_return = inverter_receive(QPIRI, _result);
-      if (_funct_return == 0) 
+//      _funct_return = inverter_receive(QPIRI, _result);
+      if (inverter_receive(QPIRI, _result) == 0) 
       {
         // checking return string lengh for QPIRI command 
         if (strlen(_result.c_str()) < 85)       
         {
-          Serial.println("INVERTER: QPIRI: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
-          _result = "";                                    // clear the string result from inverter as it is not complete
-          _funct_return = -1;                              // short string lengh for QPIRI command 
+          Serial.println(_errorDateTime() + "PV_INVERTER: QPIRI: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+          _result = "";                                    // clear the string result from PV_INVERTER as it is not complete
+//          _funct_return = -1;                              // short string lengh for QPIRI command 
         }
       }
   }
 
-int INVERTER::ask_inverter_data(uint32_t _now)
+int PV_INVERTER::ask_inverter_data(uint32_t _now)
     {
       int _funct_return = 0;
       String _result = "";
@@ -439,17 +482,17 @@ int INVERTER::ask_inverter_data(uint32_t _now)
       if (_funct_return == 0) 
       {
         if (_VERBOSE_MODE == 1)
-          Serial.println("INVERTER: QPIGS: Receipt string size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+          Serial.println(_errorDateTime() + "PV_INVERTER: QPIGS: Receipt string size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
         
         // checking return string lengh for QPIGS command 
         if (strlen(_result.c_str()) < 85)       
         {
-          Serial.println("INVERTER: QPIGS: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
-          _result = "";                                  // clear the string result from inverter as it is not complete
+          Serial.println(_errorDateTime() + "PV_INVERTER: QPIGS: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+          _result = "";                                  // clear the string result from PV_INVERTER as it is not complete
           _funct_return = -1;                            // short string lengh for QPIGS command 
         }
       }
-      store_QPIGS(_result.c_str());                      // accumulates, average and store in pipVals the inverter response or nothing.
+      store_QPIGS(_result.c_str());                      // accumulates, average and store in pipVals the PV_INVERTER response or nothing.
 
       // Ask Inverer for QPIRI configuration in the 10th QPIGS reading (0 to 9)
       // (when the averaged amount will be stored in the public variables)
@@ -467,9 +510,9 @@ int INVERTER::ask_inverter_data(uint32_t _now)
         // store QPIRI info
         store_QPIRI(_QPIRI_result);
 
-        //--- For benchmarking the averaged Solar inverter communication ---------------------------      
+        //--- For benchmarking the averaged Solar PV_INVERTER communication ---------------------------      
         if (_VERBOSE_MODE == 1)
-          Serial.println ("Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
+          Serial.println (_errorDateTime() + "Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
 
         // prepare for a new banchmarck
         _average_oldtime = millis();
@@ -477,7 +520,7 @@ int INVERTER::ask_inverter_data(uint32_t _now)
       return (int)_funct_return;    
     }
 
-int INVERTER::handle_inverter_automation(int _hour, int _min)
+int PV_INVERTER::handle_inverter_automation(int _hour, int _min)
     {
       String _resultado = "";
       uint32_t minutes = (_hour * 60) + _min ;              // Minutes to compare with preset time rules
@@ -502,13 +545,13 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP01, _resultado) == 0)                   
           {
-             Serial.println ("--INFO: INVERTER: POP01: Output Priority set to Solar/Grid/Battery");
+             Serial.println ("--INFO: PV_INVERTER: POP01: Output Priority set to Solar/Grid/Battery");
              _POP_status = POP01;
           }
           else
           {
              // Needs to treat errors for better error messages
-             Serial.println("-- ERROR: INVERTER: POP01: Failed to set Output Priority to Solar/Grid/Battery. Inverter Returned: " + _resultado);       
+             Serial.println(_errorDateTime() + "-- ERROR: PV_INVERTER: POP01: Failed to set Output Priority to Solar/Grid/Battery. PV_INVERTER Returned: " + _resultado);       
           }
         }
       }
@@ -528,14 +571,15 @@ int INVERTER::handle_inverter_automation(int _hour, int _min)
           // Only changes the Output Priority if previous status is different
           if (inverter_receive(POP02, _resultado) == 0)                   
           {
-             Serial.println ("--INFO: INVERTER: POP02: Output Priority set to Solar/Battery/Grid");
+             Serial.println ("--INFO: PV_INVERTER: POP02: Output Priority set to Solar/Battery/Grid");
              _POP_status = POP02;
           }
           else
           {
             // Needs to treat errors for better error messages
-             Serial.println("-- ERROR: INVERTER: POP02: Failed to set Output Priority to Solar/Battery/Grid. Inverter Returned: " + _resultado);       
+             Serial.println(_errorDateTime() + "-- ERROR: PV_INVERTER: POP02: Failed to set Output Priority to Solar/Battery/Grid. PV_INVERTER Returned: " + _resultado);       
           }
         }
       }
+      return 0;
     }
