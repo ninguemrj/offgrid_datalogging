@@ -25,10 +25,13 @@
 
 #include <string.h>
 #include <Arduino.h>
-#include "PVinverter.h"
-#include "FS.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sqlite3.h>
+#include <SPI.h>
+#include <FS.h>
 #include "SD.h"
-#include "SPI.h"
+#include "PVinverter.h"
 #include "time.h"
 
 class SDMANAGER_INVERTER
@@ -36,14 +39,13 @@ class SDMANAGER_INVERTER
   public:
     SDMANAGER_INVERTER(void) 
     { 
-      // Starts SD Card comunication. 
-      // This should be moved to another place for enabling 
-      // changing the SD card without turn off ESP32
-      if(!SD.begin())
-      {
-        Serial.println("-- ERROR: SDManager: SD Card Mount Failed -----------");
-        return ;
-      }
+       char *zErrMsg = 0;
+       SPI.begin();
+       SD.begin();
+       sqlite3_initialize();
+       // Open database 1
+       if (openDb("/sd/inverter.db", &db1))
+           return;
     }
   
   void begin(uint8_t _verbose_begin);
@@ -52,6 +54,17 @@ class SDMANAGER_INVERTER
   private:
   
     uint8_t _VERBOSE_MODE;
+
+    //------- SQLite3 2.3.0 --------------
+    const char* data = "Callback function called";
+    char *zErrMsg = 0;   
+    sqlite3_stmt *res;
+    const char *tail;
+    int rc;
+    sqlite3 *db1;  
+    static int callback(void *data, int argc, char **argv, char **azColName);
+    int openDb(const char *filename, sqlite3 **db);
+    int db_exec(sqlite3 *db, const char *sql);
     
     //------- Convert Unixtime to readable date ----------------
     struct tm  ts;

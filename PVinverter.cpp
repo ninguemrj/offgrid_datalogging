@@ -511,7 +511,7 @@ int PV_INVERTER::ask_inverter_data(uint32_t _now)
         store_QPIRI(_QPIRI_result);
 
         //--- For benchmarking the averaged Solar PV_INVERTER communication ---------------------------      
-        if (_VERBOSE_MODE == 1)
+        if (_VERBOSE_MODE == 2)
           Serial.println (_errorDateTime() + "Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
 
         // prepare for a new banchmarck

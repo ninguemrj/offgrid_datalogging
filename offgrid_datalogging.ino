@@ -1,4 +1,4 @@
-#define VERBOSE_MODE 1     // 0 = none  / 1 = Debug
+#define VERBOSE_MODE 2     // 0 = none  / 1 = Debug / 2=Benchmark
 
 /////////////////////////////////
 // URGENT

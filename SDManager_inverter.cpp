@@ -34,6 +34,108 @@ void SDMANAGER_INVERTER::begin(uint8_t _verbose_begin)
 
 uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online)
 {
+    /// Benchmark
+    uint32_t oldtime = millis();
+
+    //----- Prepared QPIGS INSERT SQL Statement ----------------
+    String _QPIGS_line = "INSERT INTO 'QPIGS' VALUES (" +
+      String(_thisPIP._unixtime)                + "," +
+      String(_thisPIP.gridVoltage)              + "," +
+      String(_thisPIP.gridFrequency)            + "," +
+      String(_thisPIP.acOutput)                 + "," +
+      String(_thisPIP.acFrequency)              + "," +
+      String(_thisPIP.acApparentPower)          + "," +
+      String(_thisPIP.acActivePower)            + "," +
+      String(_thisPIP.loadPercent)              + "," +
+      String(_thisPIP.busVoltage)               + "," +
+      String(_thisPIP.batteryVoltage)           + "," +
+      String(_thisPIP.batteryChargeCurrent)     + "," +
+      String(_thisPIP.batteryCharge)            + "," +
+      String(_thisPIP.inverterTemperature)      + "," +
+      String(_thisPIP.PVCurrent)                + "," +
+      String(_thisPIP.PVVoltage)                + "," +
+      String(_thisPIP.PVPower)                  + "," +
+      String(_thisPIP.batterySCC)               + "," +
+      String(_thisPIP.batteryDischargeCurrent)  + "," +
+      _thisPIP.deviceStatus[0]                  + "," +
+      _thisPIP.deviceStatus[1]                  + "," +
+      _thisPIP.deviceStatus[2]                  + "," +
+      _thisPIP.deviceStatus[3]                  + "," +
+      _thisPIP.deviceStatus[4]                  + "," +
+      _thisPIP.deviceStatus[5]                  + "," +
+      _thisPIP.deviceStatus[6]                  + "," +
+      _thisPIP.deviceStatus[7]                  + "," +
+      String(_thisPIP.batOffsetFan)             + "," +
+      String(_thisPIP.eepromVers)               + "," +
+      String(_thisPIP.PV1_chargPower)           + "," +
+      _thisPIP.deviceStatus2[0]                 + "," +
+      _thisPIP.deviceStatus2[1]                 + "," +
+      _thisPIP.deviceStatus2[2]                 +
+      ");";
+      
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SDManager: SQL Cmd line: |" + _QPIGS_line + "|END.");
+    
+
+    // Run SQL Insert statement 
+    rc = db_exec(db1, _QPIGS_line.c_str());
+    if (rc != SQLITE_OK) 
+    {
+       Serial.println(_errorDateTime() +"--- ERROR: SDManager: INSERT SQL Cmd error code: " + String(rc));
+       sqlite3_close(db1);
+       
+       return 1;
+    }
+    
+    if (_VERBOSE_MODE == 2) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: MEM HighWater: |" + String((long)sqlite3_memory_highwater(1)) + "|END.");
+
+    //sqlite3_close(db1);
+
+  /* /////// SAMPLE CODE FOR SQLite3 SELECT STATEMENT /////////////////
+    
+    // Clears previous Select results from RES pointer
+    sqlite3_finalize(res);
+    rc = sqlite3_prepare_v2(db1, "Select * from 'QPIGS'"  , 1000, &res, &tail);
+    bool first = true;
+    uint32_t rows = 0;
+    int _count = 0;
+    while (sqlite3_step(res) == SQLITE_ROW) 
+    {
+//        Serial.println("====================================================================================================");
+        if (first) 
+        {
+          _count = sqlite3_column_count(res);
+//          Serial.println("COUNT: " + String(_count));
+          
+          if (_count == 0) 
+          {
+ //           Serial.printf("Rec Count: %s\n", sqlite3_changes(db1));
+              break;
+          }
+          for (int i = 0; i<_count; i++) 
+          {
+ //           Serial.printf("Column Name: %s\n", sqlite3_column_name(res, i));
+          }
+          first = false;
+        }
+        _count = sqlite3_column_count(res);
+        int32_t test[_count];
+        for (int i = 0; i<_count; i++) 
+        {
+          test[i] =sqlite3_column_int(res, i);
+//          Serial.println("Column num: " + String(i) + " | Data: " + String(test[i]));
+        }
+        rows ++;
+
+    }
+
+   Serial.println("Columns: "+String(_count)+" | rows: "+String(rows)+" elapsed time:" + String(millis() - oldtime));
+   sqlite3_close(db1);
+*/    
+     
+  
+/*  
   //------------   Check if there is SD and available size ----------------------
   if (card_inserted() != 0) 
   {
@@ -90,6 +192,8 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
     }
 
   appendFile(SD, _file.c_str(), _QPIGS_line.c_str());
+
+  */
   return 0;
 
 }
@@ -97,6 +201,52 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
 
 /// PRIVATE FUNCTIONS ///////////////////////////////////////////////////
 
+
+//// START SQLite3 //////////////////////
+int SDMANAGER_INVERTER::callback(void *data, int argc, char **argv, char **azColName){
+   int i;
+   Serial.println(_errorDateTime() +"-- VERBOSE: SDManager: SQLite callback: " + String((const char*)data));
+/*   for (i = 0; i<argc; i++){
+       Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+   }
+   Serial.printf("\n");
+   */
+   return 0;
+}
+
+int SDMANAGER_INVERTER::openDb(const char *filename, sqlite3 **db) {
+   int _result = sqlite3_open(filename, db);
+   if (_result) {
+       Serial.println(_errorDateTime() +"-- ERROR: SDManager: SQL error: " + String(sqlite3_errmsg(*db)));
+       return _result;
+   } else {
+       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- VERBOSE: SDManager: Open database successfully");
+   }
+   return _result;
+}
+
+int SDMANAGER_INVERTER::db_exec(sqlite3 *db, const char *sql) {
+   //Serial.println(sql);
+   uint32_t start = millis();
+   int _result = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+   if (_result != SQLITE_OK) {
+       Serial.println(_errorDateTime() +"-- ERROR: SDManager: SQL error: " + String(zErrMsg));
+       sqlite3_free(zErrMsg);
+   } else {
+       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--  VERBOSE: SDManager: db_exec function ran SQL Statement successfully");
+   }
+   if (_VERBOSE_MODE == 2)
+   {
+     Serial.print("Time taken:");
+     Serial.println(millis()-start);
+   }
+   return _result;
+}
+
+//// END SQLite3 //////////////////////
+
+
+//// SD Card File manipulation //////////////////////
 uint8_t SDMANAGER_INVERTER::card_inserted()
 {
     if(SD.cardType() == CARD_NONE){
@@ -190,3 +340,5 @@ void SDMANAGER_INVERTER::deleteFile(fs::FS &fs, const char * path)
         Serial.println(path);
     }
 }
+
+//// END SD Card File manipulation //////////////////////
