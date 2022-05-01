@@ -23,15 +23,24 @@
 #ifndef SDMANAGER_INVERTER_H
 #define SDMANAGER_INVERTER_H
 
-#include <string.h>
-#include <Arduino.h>
+#ifndef ARDUINO_H
+  #include <Arduino.h>
+#endif 
+
+#ifndef STRING_H
+  #include <string.h>
+#endif
+
+#ifndef PVINVERTER_H
+  #include "PVinverter.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sqlite3.h>
 #include <SPI.h>
 #include <FS.h>
 #include "SD.h"
-#include "PVinverter.h"
 #include "time.h"
 
 class SDMANAGER_INVERTER

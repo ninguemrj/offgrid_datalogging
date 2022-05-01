@@ -58,8 +58,14 @@ TO DO LIST:
 ///// Includes ///////////////////////////////////////////////////////////////////////////////////
 
 
-#include "Arduino.h"
-#include "PVinverter.h"
+#ifndef ARDUINO_H
+  #include <Arduino.h>
+#endif 
+
+#ifndef PVINVERTER_H
+  #include "PVinverter.h"
+#endif
+
 #include <Wire.h>
 #include "SDManager_inverter.h"
 #include "webserver_inverter.h"

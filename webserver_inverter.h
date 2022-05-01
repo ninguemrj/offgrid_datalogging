@@ -1,10 +1,18 @@
 #ifndef WEBSERVER_INVERTER_H
 #define WEBSERVER_INVERTER_H
 
-#include <Arduino.h>
+#ifndef ARDUINO_H
+  #include <Arduino.h>
+#endif 
 
-#include "PVinverter.h"
-#include "String.h"
+#ifndef STRING_H
+  #include <string.h>
+#endif
+
+#ifndef PVINVERTER_H
+  #include "PVinverter.h"
+#endif
+
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
