@@ -20,8 +20,8 @@
  *    - v0.1: Initial implementation for testing only
  **************************************************************************************/
  
-#ifndef SDMANAGER_INVERTER_H
-#define SDMANAGER_INVERTER_H
+#ifndef SQLITE_INVERTER_H
+#define SQLITE_INVERTER_H
 
 #ifndef ARDUINO_H
   #include <Arduino.h>
@@ -35,18 +35,20 @@
   #include "PVinverter.h"
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef TIME_H
+  #include "time.h"
+#endif
+
 #include <sqlite3.h>
-#include <SPI.h>
+//#include <SPI.h>
 #include <FS.h>
 #include "SD.h"
-#include "time.h"
 
-class SDMANAGER_INVERTER
+
+class SQLITE_INVERTER
 {
   public:
-    SDMANAGER_INVERTER(void) 
+    SQLITE_INVERTER(void) 
     { 
        char *zErrMsg = 0;
        SPI.begin();
@@ -84,7 +86,6 @@ class SDMANAGER_INVERTER
   
     // --- SD Sample functions from SD_test.ino example ----
     // --- (https://github.com/espressif/arduino-esp32/tree/master/libraries/SD/examples/SD_Test)
-    void testFileIO(fs::FS &fs, const char * path);
     void deleteFile(fs::FS &fs, const char * path);
     void appendFile(fs::FS &fs, const char * path, const char * message);
     void writeFile(fs::FS &fs, const char * path, const char * message);

@@ -67,12 +67,15 @@ TO DO LIST:
 #endif
 
 #include <Wire.h>
-#include "SDManager_inverter.h"
+#include "SQLITE_inverter.h"
 #include "webserver_inverter.h"
 
 
 /// Time //////////////////////////////////
-#include "time.h"
+#ifndef TIME_H
+  #include "time.h"
+#endif
+
 #include "sntp.h"
 
 const char* ntpServer1 = "pool.ntp.org";
@@ -97,8 +100,8 @@ struct tm timeinfo;
 // Change this argument to the SERIAL actualy used to communicates with the inverter
 PV_INVERTER inv(Serial2);
 
-//***** Prepare SDManager variable ***************************************************
-SDMANAGER_INVERTER SD_inv;
+//***** Prepare SQLITE variable ***************************************************
+SQLITE_INVERTER SQL_inv;
 
 //***** Prepare WEBSERVER variable ***************************************************
 WEBSERVER_INVERTER WEB_inv;
@@ -140,8 +143,8 @@ void setup() {
 //***** Prepare NTC Time client **************************************
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
 
-//***** Prepare SDManager_inverter to store data on SD CARD **********
-  SD_inv.begin(VERBOSE_MODE);
+//***** Prepare SQLITE_inverter to store data on SD CARD **********
+  SQL_inv.begin(VERBOSE_MODE);
 
 //***** SETUP END
   Serial.println("**** Setup: initialized.");
@@ -171,12 +174,11 @@ void loop()
   {
 
     // Prints on console in VERBOSE mode
-          Serial.println("QPIGS_average--------------------------------------------------------------");
     if (VERBOSE_MODE == 1) inv.console_data(inv.QPIGS_average); 
 
     // Store data on SD
     // "_stored_online" fized as "true", as it was not implemented yet
-    if (SD_inv.sd_StoreQPIGS(inv.QPIGS_average, true) != 0)
+    if (SQL_inv.sd_StoreQPIGS(inv.QPIGS_average, true) != 0)
     {
       Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
     }

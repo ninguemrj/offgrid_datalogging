@@ -1,5 +1,5 @@
 /**************************************************************************************
- * SDManager_inverter.cpp (v0.1)
+ * SQLITE_INVERTER.cpp (v0.1)
  * Library to be used (or not) with the PV_inverter library.
  * Created to store read data in SD card for backup purposes.
  * 
@@ -10,7 +10,7 @@
  *    - Receive information if the data was updated on cloud or not.
  *      If not, store in a separated file the offline readings; 
  *    - When ESP32 become online again, main code will call a function 
- *      to SDManager_inverter provide to WIFI module the off line readings
+ *      to SQLITE_INVERTER provide to WIFI module the off line readings
  *      to update the cloud server;
  *    - Create function to store QPIRI data (different file name);
  *    - Create function to store other Inverter feedback commands;
@@ -20,19 +20,19 @@
  *    - v0.1: Initial implementation for testing only
  **************************************************************************************/
  
-#include "SDManager_inverter.h"
+#include "SQLite_inverter.h"
 
 ////////// Date and time function for error mesages //////////
 extern String _errorDateTime();
 
 
-void SDMANAGER_INVERTER::begin(uint8_t _verbose_begin)
+void SQLITE_INVERTER::begin(uint8_t _verbose_begin)
 {
     // Sharing the same verbose mode from main code
     _VERBOSE_MODE = _verbose_begin;
 }
 
-uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online)
+uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online)
 {
     /// Benchmark
     uint32_t oldtime = millis();
@@ -73,22 +73,22 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
       String(_thisPIP.deviceStatus2[2])         +
       ");";
       
-    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SDManager: SQL Cmd line: |" + _QPIGS_line + "|END.");
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SQLITEr: SQL Cmd line: |" + _QPIGS_line + "|END.");
     
 
     // Run SQL Insert statement 
     rc = db_exec(db1, _QPIGS_line.c_str());
     if (rc != SQLITE_OK) 
     {
-       Serial.println(_errorDateTime() +"--- ERROR: SDManager: INSERT SQL Cmd error code: " + String(rc));
+       Serial.println(_errorDateTime() +"--- ERROR: SQLITE: INSERT SQL Cmd error code: " + String(rc));
        sqlite3_close(db1);
        
        return 1;
     }
     
-    if (_VERBOSE_MODE == 2) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
-    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");
-    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SDManager: MEM HighWater: |" + String((long)sqlite3_memory_highwater(1)) + "|END.");
+    if (_VERBOSE_MODE == 2) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");
+    if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: MEM HighWater: |" + String((long)sqlite3_memory_highwater(1)) + "|END.");
 
     //sqlite3_close(db1);
 
@@ -139,7 +139,7 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
   //------------   Check if there is SD and available size ----------------------
   if (card_inserted() != 0) 
   {
-    Serial.println(_errorDateTime() + "-- ERROR: SDManager: QPIGS not stored in SD Card! -----");
+    Serial.println(_errorDateTime() + "-- ERROR: SQLITE: QPIGS not stored in SD Card! -----");
     return 1;
   }
 
@@ -187,8 +187,8 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
 
     if (_VERBOSE_MODE == 1)
     {
-      Serial.println(_errorDateTime() + "-- VERBOSE: SDManager: File name: " + _file);
-      Serial.println(_errorDateTime() + "-- VERBOSE: SDManager: QPIGS String |" + _QPIGS_line + "|");
+      Serial.println(_errorDateTime() + "-- VERBOSE: SQLITE: File name: " + _file);
+      Serial.println(_errorDateTime() + "-- VERBOSE: SQLITE: QPIGS String |" + _QPIGS_line + "|");
     }
 
   appendFile(SD, _file.c_str(), _QPIGS_line.c_str());
@@ -203,9 +203,9 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
 
 
 //// START SQLite3 //////////////////////
-int SDMANAGER_INVERTER::callback(void *data, int argc, char **argv, char **azColName){
+int SQLITE_INVERTER::callback(void *data, int argc, char **argv, char **azColName){
    int i;
-   Serial.println(_errorDateTime() +"-- VERBOSE: SDManager: SQLite callback: " + String((const char*)data));
+   Serial.println(_errorDateTime() +"-- VERBOSE: SQLITE: SQLite callback: " + String((const char*)data));
 /*   for (i = 0; i<argc; i++){
        Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
    }
@@ -214,26 +214,26 @@ int SDMANAGER_INVERTER::callback(void *data, int argc, char **argv, char **azCol
    return 0;
 }
 
-int SDMANAGER_INVERTER::openDb(const char *filename, sqlite3 **db) {
+int SQLITE_INVERTER::openDb(const char *filename, sqlite3 **db) {
    int _result = sqlite3_open(filename, db);
    if (_result) {
-       Serial.println(_errorDateTime() +"-- ERROR: SDManager: SQL error: " + String(sqlite3_errmsg(*db)));
+       Serial.println(_errorDateTime() +"-- ERROR: SQLITE: SQL error: " + String(sqlite3_errmsg(*db)));
        return _result;
    } else {
-       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- VERBOSE: SDManager: Open database successfully");
+       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- VERBOSE: SQLITE: Open database successfully");
    }
    return _result;
 }
 
-int SDMANAGER_INVERTER::db_exec(sqlite3 *db, const char *sql) {
+int SQLITE_INVERTER::db_exec(sqlite3 *db, const char *sql) {
    //Serial.println(sql);
    uint32_t start = millis();
    int _result = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
    if (_result != SQLITE_OK) {
-       Serial.println(_errorDateTime() +"-- ERROR: SDManager: SQL error: " + String(zErrMsg));
+       Serial.println(_errorDateTime() +"-- ERROR: SQLITE: SQL error: " + String(zErrMsg));
        sqlite3_free(zErrMsg);
    } else {
-       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--  VERBOSE: SDManager: db_exec function ran SQL Statement successfully");
+       if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--  VERBOSE: SQLITE: db_exec function ran SQL Statement successfully");
    }
    if (_VERBOSE_MODE == 2)
    {
@@ -247,29 +247,29 @@ int SDMANAGER_INVERTER::db_exec(sqlite3 *db, const char *sql) {
 
 
 //// SD Card File manipulation //////////////////////
-uint8_t SDMANAGER_INVERTER::card_inserted()
+uint8_t SQLITE_INVERTER::card_inserted()
 {
     if(SD.cardType() == CARD_NONE){
-        Serial.println(_errorDateTime() + "-- ERROR: SDManager: No SD card attached.");
+        Serial.println(_errorDateTime() + "-- ERROR: SQLITE: No SD card attached.");
         return 1;
     }
     
     // --- only 0.5mb available ERROR
     if((SD.cardSize() - SD.usedBytes()) < (500 * 1024) )
     {
-        Serial.println(_errorDateTime() + "--- ERROR: SDManager: less than 500kb available, STORE function not executed!");
+        Serial.println(_errorDateTime() + "--- ERROR: SQLITE: less than 500kb available, STORE function not executed!");
         return 2;
     }
 
     // --- less then 100mb available warning
     if((SD.cardSize() - SD.usedBytes()) < (100 * 1024 * 1024) )
     {
-        Serial.println(_errorDateTime() + "--- WARNING: SDManager: less than 100mb available, please change SD Card!");
+        Serial.println(_errorDateTime() + "--- WARNING: SQLITE: less than 100mb available, please change SD Card!");
     }    
     
     if (_VERBOSE_MODE == 1)
     {
-      Serial.print(_errorDateTime() + "--- VERBOSE: SDManager_inverter: SD Card Size: ");
+      Serial.print(_errorDateTime() + "--- VERBOSE: SQLITE_INVERTER: SD Card Size: ");
       Serial.print(SD.cardSize()/1024/1024.00);
       Serial.print(" Mb | Available: ");
       Serial.print((SD.cardSize() - SD.usedBytes()) /1024/1024.00);
@@ -283,10 +283,10 @@ uint8_t SDMANAGER_INVERTER::card_inserted()
 
 // Missing better implementation: Read line by line into an feedback array
 
-void SDMANAGER_INVERTER::readFile(fs::FS &fs, const char * path){
+void SQLITE_INVERTER::readFile(fs::FS &fs, const char * path){
    File file = fs.open(path);
     if(!file){
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to open the file for reading: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to open the file for reading: ");
         Serial.println(path);
         return;
     }
@@ -298,45 +298,45 @@ void SDMANAGER_INVERTER::readFile(fs::FS &fs, const char * path){
     file.close();
 }
 
-void SDMANAGER_INVERTER::writeFile(fs::FS &fs, const char * path, const char * message)
+void SQLITE_INVERTER::writeFile(fs::FS &fs, const char * path, const char * message)
 {
     File file = fs.open(path, FILE_WRITE);
     if(!file)
     {
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to open file for writing: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to open file for writing: ");
         Serial.println(path);
         return;
     }
     if(!file.print(message))
     {
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to write data in the file: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to write data in the file: ");
         Serial.println(path);
     }
     file.close();
 }
 
-void SDMANAGER_INVERTER::appendFile(fs::FS &fs, const char * path, const char * message)
+void SQLITE_INVERTER::appendFile(fs::FS &fs, const char * path, const char * message)
 {
     File file = fs.open(path, FILE_APPEND);
     if(!file)
     {
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to open file for appending: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to open file for appending: ");
         Serial.println(path);
         return;
     }
     if(!file.println(message))
     {
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to append data in the file: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to append data in the file: ");
         Serial.println(path);
     }
     file.close();
 }
 
-void SDMANAGER_INVERTER::deleteFile(fs::FS &fs, const char * path)
+void SQLITE_INVERTER::deleteFile(fs::FS &fs, const char * path)
 {
     if(!fs.remove(path))
     {
-        Serial.print("--- ERROR: SDManager_Inverter: Failed to delete file: ");
+        Serial.print("--- ERROR: SQLITE_INVERTER: Failed to delete file: ");
         Serial.println(path);
     }
 }
