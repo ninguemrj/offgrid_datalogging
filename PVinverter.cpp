@@ -245,7 +245,6 @@ void PV_INVERTER::smoothing_QPIGS()
     _QPIGS_tempAverage.batterySCC               += QPIGS_values.batterySCC;
     _QPIGS_tempAverage.batteryDischargeCurrent  += QPIGS_values.batteryDischargeCurrent;
     for(int i=0; i<8; i++)  _QPIGS_tempAverage.deviceStatus[i]=QPIGS_values.deviceStatus[i];  // take the lastest read string only
-    Serial.println("XXX - _QPIGS_tempAverage.deviceStatus[0] as char: |" + String(_QPIGS_tempAverage.deviceStatus[0]));
     
     if ( _inverter_protocol == 2)   // 2 = 22 fields from QPIGS
     {
