@@ -1,5 +1,5 @@
-#ifndef PV_INVERTER_H
-#define PV_INVERTER_H
+#ifndef PVINVERTER_H
+#define PVINVERTER_H
 
 #include <string.h>
 #include <HardwareSerial.h>

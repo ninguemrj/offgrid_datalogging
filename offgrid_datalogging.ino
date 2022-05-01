@@ -59,7 +59,7 @@ TO DO LIST:
 
 
 #include "Arduino.h"
-#include "PV_inverter.h"
+#include "PVinverter.h"
 #include <Wire.h>
 #include "SDManager_inverter.h"
 #include "webserver_inverter.h"

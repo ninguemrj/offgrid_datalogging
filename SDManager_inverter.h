@@ -31,7 +31,7 @@
 #include <SPI.h>
 #include <FS.h>
 #include "SD.h"
-#include "PV_inverter.h"
+#include "PVinverter.h"
 #include "time.h"
 
 class SDMANAGER_INVERTER
