@@ -123,11 +123,11 @@ void setup() {
 
 //***** PVINVERTER ***************************************************
   // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
-  inv.begin(2400, 'B', VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
+  inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv.pipVals);
+  WEB_inv.begin(ssid, password, &inv.QPIGS_values);
 
 
 
@@ -154,28 +154,29 @@ void loop()
   time(&now);
   
   //--------- Request QPIGS and QPIRI data from inverter  --------------
-  returned_code = inv.ask_inverter_data(now);
+  returned_code = inv.ask_data(now, true);
   if (returned_code != 0)                 
   {
-    Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'ask_inverter_data' function! Erro code:" + String(returned_code));        
+    Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'ask_data' function! Erro code:" + String(returned_code));        
   }
 
-  // --- check for contents on pipVals structure
-  if((inv.pipVals.acOutput != 0) && (previous_reading_unixtime != inv.pipVals._unixtime))
+  // --- check for contents on QPIGS_values structure
+  if((inv.QPIGS_average.acOutput != 0) && (previous_reading_unixtime != inv.QPIGS_average._unixtime))
   {
 
     // Prints on console in VERBOSE mode
-    if (VERBOSE_MODE == 1) inv.inverter_console_data(); 
+          Serial.println("QPIGS_average--------------------------------------------------------------");
+    if (VERBOSE_MODE == 1) inv.console_data(inv.QPIGS_average); 
 
     // Store data on SD
     // "_stored_online" fized as "true", as it was not implemented yet
-    if (SD_inv.sd_StoreQPIGS(inv.pipVals, true) != 0)
+    if (SD_inv.sd_StoreQPIGS(inv.QPIGS_average, true) != 0)
     {
       Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
     }
 
     // Updated "previous_reading_unixtime" to avoid storing the same data twice
-    previous_reading_unixtime = inv.pipVals._unixtime;
+    previous_reading_unixtime = inv.QPIGS_average._unixtime;
   }                  
 
   ////////////////////////////////////////////////////////////////////////////////////
@@ -185,10 +186,10 @@ void loop()
   // inverter settings considering inverter class rules
   // Uncomment it to use it
   ////////////////////////////////////////////////////////////////////////////////////
-  if (inv.handle_inverter_automation(timeinfo.tm_hour, timeinfo.tm_min) != 0) 
+  if (inv.handle_automation(timeinfo.tm_hour, timeinfo.tm_min, true) != 0) 
     Serial.println(_errorDateTime() + "-- ERROR: INVERTER: Automation Error! Error code: " + String(returned_code));        
 
-  yield();
+  inv.ESPyield();
   
 }
 

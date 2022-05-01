@@ -57,20 +57,20 @@ uint8_t SDMANAGER_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool 
       String(_thisPIP.PVPower)                  + "," +
       String(_thisPIP.batterySCC)               + "," +
       String(_thisPIP.batteryDischargeCurrent)  + "," +
-      _thisPIP.deviceStatus[0]                  + "," +
-      _thisPIP.deviceStatus[1]                  + "," +
-      _thisPIP.deviceStatus[2]                  + "," +
-      _thisPIP.deviceStatus[3]                  + "," +
-      _thisPIP.deviceStatus[4]                  + "," +
-      _thisPIP.deviceStatus[5]                  + "," +
-      _thisPIP.deviceStatus[6]                  + "," +
-      _thisPIP.deviceStatus[7]                  + "," +
+      String(_thisPIP.deviceStatus[0])          + "," +
+      String(_thisPIP.deviceStatus[1])          + "," +
+      String(_thisPIP.deviceStatus[2])          + "," +
+      String(_thisPIP.deviceStatus[3])          + "," +
+      String(_thisPIP.deviceStatus[4])          + "," +
+      String(_thisPIP.deviceStatus[5])          + "," +
+      String(_thisPIP.deviceStatus[6])          + "," +
+      String(_thisPIP.deviceStatus[7])          + "," +
       String(_thisPIP.batOffsetFan)             + "," +
       String(_thisPIP.eepromVers)               + "," +
       String(_thisPIP.PV1_chargPower)           + "," +
-      _thisPIP.deviceStatus2[0]                 + "," +
-      _thisPIP.deviceStatus2[1]                 + "," +
-      _thisPIP.deviceStatus2[2]                 +
+      String(_thisPIP.deviceStatus2[0])         + "," +
+      String(_thisPIP.deviceStatus2[1])         + "," +
+      String(_thisPIP.deviceStatus2[2])         +
       ");";
       
     if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SDManager: SQL Cmd line: |" + _QPIGS_line + "|END.");
