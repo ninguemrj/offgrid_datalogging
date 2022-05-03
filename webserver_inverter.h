@@ -16,6 +16,8 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
+#include "SQLITE_inverter.h"
 
 
 class WEBSERVER_INVERTER
@@ -25,7 +27,8 @@ class WEBSERVER_INVERTER
 
     WEBSERVER_INVERTER() {};
 
-    void begin(String _ssid, String _password, PV_INVERTER::pipVals_t *_thisPIP);
+    void begin(String _ssid, String _password, PV_INVERTER::pipVals_t *_thisPIP, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40]);
+
 
   private:
 

@@ -134,9 +134,6 @@ void setup() {
   // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
   inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
 
-//***** Prepare WEBSERVER for LIVE data ******************************
-// Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv.QPIGS_values);
 
 
 
@@ -145,6 +142,11 @@ void setup() {
 
 //***** Prepare SQLITE_inverter to store data on SD CARD **********
   SQL_inv.begin(VERBOSE_MODE);
+
+//***** Prepare WEBSERVER for LIVE data ******************************
+// Default web server port = 80
+  WEB_inv.begin(ssid, password, &inv.QPIGS_values, &SQL_inv.SQL_QPIGS);
+
 
 //***** SETUP END
   Serial.println("**** Setup: initialized.");
@@ -182,6 +184,9 @@ void loop()
     {
       Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
     }
+
+    // Updates latest 40 QPIGS array from SQLite
+    SQL_inv.ask_latest_SQL_QPIGS();
 
     // Updated "previous_reading_unixtime" to avoid storing the same data twice
     previous_reading_unixtime = inv.QPIGS_average._unixtime;

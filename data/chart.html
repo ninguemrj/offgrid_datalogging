@@ -1,0 +1,87 @@
+<html>
+    <Head>
+        <script src="https://code.highcharts.com/stock/highstock.js"></script>
+        <script src="https://code.highcharts.com/modules/timeline.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+        <script>
+
+        let chart; // global
+        /**
+        * Request data from the server, add it to the graph and set a timeout to request again
+        */
+         //console.log("TESTE"); 
+         async function requestData() {
+            const result = await fetch('http://192.168.0.122/PVPower.json');
+          if (result.ok) {
+              const data = await result.json();
+              for (let i=0; i< 40; i++)
+              {
+                //console.log(data['PVPower'][i]);
+                //console.log(data['unixtime'][i]); 
+                //const [analog, PVPower] = data[0];
+                const point = [data['unixtime'][i]*1000, data['PVPower'][i]];
+                //console.log("Point");
+                //console.log(point);
+                const series = chart.series[0];
+                shift = series.data.length > 40;
+                console.log("series.data.length");
+                console.log(series.data.length);
+                chart.series[0].addPoint(point, true, shift);
+              }
+
+             // shift = series.data.length > 40; // shift if the series is longer than 20
+              // add the point
+
+              //call it again after one second
+              setTimeout(requestData, 10000);
+          }
+        }
+
+
+        // Create the chart
+        window.addEventListener('load', function () {
+        chart = new Highcharts.Chart({
+            chart: {
+                renderTo: 'container',
+                events: {
+                    load: requestData
+                }
+            },
+            title: {
+                text: 'Generated Solar Power'
+            },
+            plotOptions: {
+                line: { animation: false,
+                dataLabels: { enabled: true }
+                },
+                series: { color: '#059e8a', lineWidth: 3 } 
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: { second: '%H:%M:%S' },
+                //tickPixelInterval: 150,
+                maxZoom: 20 * 1000
+            },
+            yAxis: {
+                minPadding: 0.2,
+                maxPadding: 0.2,
+                title: {
+                    text: 'Watts',
+                    margin: 80
+                }
+            },
+            series: [{
+            name: 'Generated Power',
+            data: []
+            }]
+        });
+        });
+
+        </script>
+
+    </Head>
+    <body>
+        <div id="container" style="height: 400px; min-width: 310px"></div>
+    </body>
+</html>

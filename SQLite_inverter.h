@@ -60,7 +60,10 @@ class SQLITE_INVERTER
     }
   
   void begin(uint8_t _verbose_begin);
+  void ask_latest_SQL_QPIGS();
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);
+  PV_INVERTER::pipVals_t SQL_QPIGS[40];
+
   
   private:
   

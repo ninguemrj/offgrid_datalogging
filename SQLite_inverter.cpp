@@ -32,6 +32,62 @@ void SQLITE_INVERTER::begin(uint8_t _verbose_begin)
     _VERBOSE_MODE = _verbose_begin;
 }
 
+
+void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
+{
+/////// SAMPLE CODE FOR SQLite3 SELECT STATEMENT /////////////////
+    
+    // Clears previous Select results from RES pointer
+    sqlite3_finalize(res);
+    rc = sqlite3_prepare_v2(db1, "Select * from 'QPIGS' ORDER BY _unixtime DESC LIMIT 40"  , 1000, &res, &tail);
+    uint32_t _rows = 0;
+    int _count = 0;
+    while (sqlite3_step(res) == SQLITE_ROW) 
+    {
+        Serial.println("====================================================================================================");
+        _count = sqlite3_column_count(res);
+        SQL_QPIGS[_rows]._unixtime                = sqlite3_column_int(res, 0);
+        SQL_QPIGS[_rows].gridVoltage              = sqlite3_column_int(res, 1);
+        SQL_QPIGS[_rows].gridFrequency            = sqlite3_column_int(res, 2);
+        SQL_QPIGS[_rows].acOutput                 = sqlite3_column_int(res, 3);
+        SQL_QPIGS[_rows].acFrequency              = sqlite3_column_int(res, 4);
+        SQL_QPIGS[_rows].acApparentPower          = sqlite3_column_int(res, 5);
+        SQL_QPIGS[_rows].acActivePower            = sqlite3_column_int(res, 6);
+        SQL_QPIGS[_rows].loadPercent              = sqlite3_column_int(res, 7);
+        SQL_QPIGS[_rows].busVoltage               = sqlite3_column_int(res, 8);
+        SQL_QPIGS[_rows].batteryVoltage           = sqlite3_column_int(res, 9);
+        SQL_QPIGS[_rows].batteryChargeCurrent     = sqlite3_column_int(res, 10);
+        SQL_QPIGS[_rows].batteryCharge            = sqlite3_column_int(res, 11);
+        SQL_QPIGS[_rows].inverterTemperature      = sqlite3_column_int(res, 12);
+        SQL_QPIGS[_rows].PVCurrent                = sqlite3_column_int(res, 13);
+        SQL_QPIGS[_rows].PVVoltage                = sqlite3_column_int(res, 14);
+        SQL_QPIGS[_rows].PVPower                  = sqlite3_column_int(res, 15);
+        SQL_QPIGS[_rows].batterySCC               = sqlite3_column_int(res, 16);
+        SQL_QPIGS[_rows].batteryDischargeCurrent  = sqlite3_column_int(res, 17);
+        SQL_QPIGS[_rows].deviceStatus[0]          = sqlite3_column_int(res, 18);
+        SQL_QPIGS[_rows].deviceStatus[1]          = sqlite3_column_int(res, 19);
+        SQL_QPIGS[_rows].deviceStatus[2]          = sqlite3_column_int(res, 20);
+        SQL_QPIGS[_rows].deviceStatus[3]          = sqlite3_column_int(res, 21);
+        SQL_QPIGS[_rows].deviceStatus[4]          = sqlite3_column_int(res, 22);
+        SQL_QPIGS[_rows].deviceStatus[5]          = sqlite3_column_int(res, 23);
+        SQL_QPIGS[_rows].deviceStatus[6]          = sqlite3_column_int(res, 24);
+        SQL_QPIGS[_rows].deviceStatus[7]          = sqlite3_column_int(res, 25);
+        SQL_QPIGS[_rows].batOffsetFan             = sqlite3_column_int(res, 26);
+        SQL_QPIGS[_rows].eepromVers               = sqlite3_column_int(res, 27);
+        SQL_QPIGS[_rows].PV1_chargPower           = sqlite3_column_int(res, 28);
+        SQL_QPIGS[_rows].deviceStatus2[0]         = sqlite3_column_int(res, 29);
+        SQL_QPIGS[_rows].deviceStatus2[1]         = sqlite3_column_int(res, 30);
+        SQL_QPIGS[_rows].deviceStatus2[2]         = sqlite3_column_int(res, 31);
+
+        Serial.println("ROW num: " + String(_rows) + "Column: _unixtime  | Data: " + String(SQL_QPIGS[_rows]._unixtime));
+
+        // Prepare the row counter for the next row
+        _rows ++;
+    }
+
+
+}
+
 uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online)
 {
     /// Benchmark
