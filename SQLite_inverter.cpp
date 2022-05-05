@@ -36,7 +36,7 @@ void SQLITE_INVERTER::begin(uint8_t _verbose_begin)
 void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
 {
 /////// SAMPLE CODE FOR SQLite3 SELECT STATEMENT /////////////////
-    
+    uint32_t teste2 = millis();
     // Clears previous Select results from RES pointer
     sqlite3_finalize(res);
     rc = sqlite3_prepare_v2(db1, "Select * from 'QPIGS' ORDER BY _unixtime DESC LIMIT 40"  , 1000, &res, &tail);
@@ -44,7 +44,6 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
     int _count = 0;
     while (sqlite3_step(res) == SQLITE_ROW) 
     {
-        Serial.println("====================================================================================================");
         _count = sqlite3_column_count(res);
         SQL_QPIGS[_rows]._unixtime                = sqlite3_column_int(res, 0);
         SQL_QPIGS[_rows].gridVoltage              = sqlite3_column_int(res, 1);
@@ -79,11 +78,13 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         SQL_QPIGS[_rows].deviceStatus2[1]         = sqlite3_column_int(res, 30);
         SQL_QPIGS[_rows].deviceStatus2[2]         = sqlite3_column_int(res, 31);
 
-        Serial.println("ROW num: " + String(_rows) + "Column: _unixtime  | Data: " + String(SQL_QPIGS[_rows]._unixtime));
+        Serial.println("Column: _unixtime  | Data: " + String(SQL_QPIGS[_rows]._unixtime) + "|  ROW num: " + String(_rows));
 
         // Prepare the row counter for the next row
         _rows ++;
     }
+    Serial.println("-----------");
+    //Serial.println("ROW num: " + String(_rows) + "| time SELECT: " + String(millis()-teste2));
 
 
 }
