@@ -4,7 +4,7 @@
 extern String _errorDateTime();
 
 
-void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipVals_t *_thisPIP, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40])
+void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40])
 {
       //--- Initialize ESP SPIFFS (flash filesystem) to recover the index.html file --------
       if(!SPIFFS.begin()){
@@ -44,31 +44,31 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
   
   //--- PV CHARGER POWER from pipvals  -----------------
 
-  _server.on("/PVPower", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/PVPower", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", String(_thisPIP->PV1_chargPower).c_str() );
+    request->send(200, "text/plain", String(_inv->QPIGS_values.PV1_chargPower).c_str() );
   });
 
 
   //--- PV CHARGER STATUS from pipvals  -----------------
 
-  _server.on("/charger_status", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/charger_status", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
     String _response = "";
 
-    if (_thisPIP->DevStat_Chargingstatus == 1)
+    if (_inv->QPIGS_values.DevStat_Chargingstatus == 1)
     {
-      if (_thisPIP->ChargerSourcePriority == 2)
+      if (_inv->QPIGS_values.ChargerSourcePriority == 2)
       {
         _response = "sun_plug";
       }
       else
       {
-        if (_thisPIP->ChargerSourcePriority == 3)
+        if (_inv->QPIGS_values.ChargerSourcePriority == 3)
         {
           _response = "sun";
         }
-        if (_thisPIP->ChargerSourcePriority == 0)
+        if (_inv->QPIGS_values.ChargerSourcePriority == 0)
         {
           _response = "plug";
         }
@@ -85,9 +85,9 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
 
   //--- PV BATTERY VOLTS from pipvals  -----------------
 
-  _server.on("/battery_volts", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/battery_volts", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    String _response = String((float)_thisPIP->batteryVoltage/100.00);
+    String _response = String((float)_inv->QPIGS_values.batteryVoltage/100.00);
     request->send(200, "text/plain", _response );
   });
 
@@ -117,27 +117,27 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
 
   
   //--- ACTIVE POWER from pipvals ---------------------
-  _server.on("/ActivePower", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/ActivePower", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", String(_thisPIP->acActivePower).c_str());
+    request->send(200, "text/plain", String(_inv->QPIGS_values.acActivePower).c_str());
   });
 
   //--- BATTERY VOLTAGE from pipvals ---------------------
-  _server.on("/BatVoltage", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/BatVoltage", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", String(_thisPIP->batteryVoltage/100.00).c_str());
+    request->send(200, "text/plain", String(_inv->QPIGS_values.batteryVoltage/100.00).c_str());
   });
 
   //--- BATTERY CHARGE from pipvals ---------------------
-  _server.on("/BatCharge", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/BatCharge", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", String(_thisPIP->batteryChargeCurrent).c_str());
+    request->send(200, "text/plain", String(_inv->QPIGS_values.batteryChargeCurrent).c_str());
   });
 
   //--- BATTERY DISCHARGE from pipvals ---------------------
-  _server.on("/BatDischarge", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/BatDischarge", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", String(_thisPIP->batteryDischargeCurrent).c_str());
+    request->send(200, "text/plain", String(_inv->QPIGS_values.batteryDischargeCurrent).c_str());
   });
 
 
@@ -180,9 +180,9 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
 
 
   //--- DEBUG INFO from pipvals ---------------------
-  _server.on("/debug", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  _server.on("/debug", HTTP_GET, [_inv](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", debug_QPIGS(*_thisPIP));
+    request->send(200, "text/plain", _inv->debug_QPIGS(_inv->QPIGS_values));
   });
 
 

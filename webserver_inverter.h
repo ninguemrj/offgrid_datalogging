@@ -19,8 +19,6 @@
 #include <ArduinoJson.h>
 #include "SQLITE_inverter.h"
 
-extern String PV_INVERTER::debug_QPIGS(PV_INVERTER::pipVals_t _thisPIP);
-    
 class WEBSERVER_INVERTER
 {
   public:
@@ -28,7 +26,7 @@ class WEBSERVER_INVERTER
 
     WEBSERVER_INVERTER() {};
 
-    void begin(String _ssid, String _password, PV_INVERTER::pipVals_t *_thisPIP, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40]);
+    void begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40]);
 
 
   private:

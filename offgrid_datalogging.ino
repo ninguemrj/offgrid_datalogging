@@ -1,4 +1,4 @@
-#define VERBOSE_MODE 2     // 0 = none  / 1 = Debug / 2=Benchmark
+#define VERBOSE_MODE 1     // 0 = none  / 1 = Debug / 2=Benchmark
 
 /////////////////////////////////
 // URGENT
@@ -145,7 +145,7 @@ void setup() {
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv.QPIGS_values, &SQL_inv.SQL_QPIGS);
+  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_QPIGS);
 
 
 //***** SETUP END
