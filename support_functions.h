@@ -16,6 +16,9 @@
 #ifndef SUPPORT_FUNCTIONS_H
 #define SUPPORT_FUNCTIONS_H
 
+#ifndef ARDUINO_H
+  #include <Arduino.h>
+#endif 
 
 #ifndef STRING_H
   #include <string.h>
@@ -30,8 +33,8 @@
 class SUPPORT_FUNCTIONS
 {
   public:
-    void debugMsg(int _level, char _msg);    // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
-    void debugMsg(int _level, String _msg);  // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
+    void debugMsg(int _level, char _msg, int _VERBOSE_MODE);    // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
+    void debugMsg(int _level, String _msg, int _VERBOSE_MODE);  // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
 
 
 };
