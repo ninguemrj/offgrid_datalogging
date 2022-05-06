@@ -91,11 +91,20 @@ class PV_INVERTER
       uint32_t PVPower;                 // xxxx W    * 10
       uint32_t batterySCC;              // xx.xx V   * 100
       uint32_t batteryDischargeCurrent; // xxxx A
-      uint8_t deviceStatus[8];             // 8 bit binary 
+      uint8_t DevStat_SBUpriority;      // b7: add SBU priority version
+      uint8_t DevStat_ConfigStatus;     // b6: configuration status: 1: Change 0: unchanged
+      uint8_t DevStat_FwUpdate;         // b5: SCC firmware version 1: Updated 0: unchanged
+      uint8_t DevStat_LoadStatus;       // b4: Load status: 0: Load off 1:Load on
+      uint8_t DevStat_BattVoltSteady;   // b3: battery voltage to steady while charging
+      uint8_t DevStat_Chargingstatus;   // b2: Charging status( Charging on/off) 
+      uint8_t DevStat_SCCcharge;        // b1: Charging status( SCC charging on/off)
+      uint8_t DevStat_ACcharge;         // b0: Charging status(AC charging on/off)
       uint16_t batOffsetFan;            // Battery voltage offset for fans on  (2 numbers)
       uint16_t eepromVers;              // EEPROM version (2 numbers)
       unsigned long int PV1_chargPower; // PV1 Charging power (5 numbers)
-      uint8_t deviceStatus2[4];            // Devide status 2
+      uint8_t DevStat_chargingFloatMode;// 10: flag for charging to floating mode
+      uint8_t DevStat_SwitchOn;         // b9: Switch On
+      uint8_t DevStat_dustProof;        // b8: flag for dustproof installed(1-dustproof installed,0-no dustproof
       uint32_t bat_backToUtilityVolts;  // Setup voltage to stop using battery and back to GRID power
       uint32_t bat_bulkChargeVolts;     // Setup voltage to 1st (elevation) and 2nd (Absorption) battery charge stages
       uint32_t bat_FloatChargeVolts;    // Setup voltage to 3rd (Floating) battery charge stage
@@ -105,26 +114,7 @@ class PV_INVERTER
       
     } QPIGS_values;
 
-    struct DevStatus_t 
-    {
-      uint8_t changingFloatMode = 0 ;  // 10: flag for charging to floating mode
-      uint8_t SwitchOn = 0 ;           // b9: Switch On
-      uint8_t dustProof = 0 ;          // b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
-      uint8_t SBUpriority = 0 ;        // b7: add SBU priority version  b7
-      uint8_t ConfigStatus = 0 ;       // b6: configuration status: 1: Change 0: unchanged
-      uint8_t FwUpdate = 0 ;           // b5: SCC firmware version 1: Updated 0: unchanged
-      uint8_t LoadStatus = 0 ;         // b4: Load status: 0: Load off 1:Load on
-      uint8_t BattVoltSteady = 0 ;     // b3: battery voltage to steady while charging
-                                       // b2b1b0: 000: Do nothing 
-                                                  // 110: Charging on with SCC charge on
-                                                  // 101: Charging on with AC charge on
-                                                  // 111: Charging on with SCC and AC charge on
-      uint8_t Chargingstatus = 0 ;     // b2: Charging status( Charging on/off)
-      uint8_t SCCcharge = 0 ;          // b1: Charging status( SCC charging on/off)
-      uint8_t ACcharge = 0 ;           // b0: Charging status(AC charging on/off)
-    } DevStatus;
-
-    struct QpiriVals_t  // Device Rating Information inquiry
+  struct QpiriVals_t  // Device Rating Information inquiry
     {
       uint32_t GridRatingVoltage;           // Grid rating voltage              xx.x V * 10
       uint32_t GridRatingCurrent;           // Grid rating current              xx.x A * 10
@@ -238,15 +228,15 @@ class PV_INVERTER
     PV_INVERTER( HardwareSerial& device) {hwStream = &device;}
     PV_INVERTER( SoftwareSerial& device) {swStream = &device;}
 
-    void begin(uint32_t _baudRate, int _inverter_protocol = 1, uint8_t _verbose_begin = 0); // _protocol: 1 = 18 fields from QPIGS / 2 = 22 fields from QPIGS 
+    void begin(uint32_t _baudRate, int _inverter_protocol = 1, uint8_t _verbose_begin = 0, int _timeout = 1000); // _protocol: 1 = 18 fields from QPIGS / 2 = 22 fields from QPIGS  
                                                                             // _verbose_begin: 0 = none  / 1 = Debug 
     void ESPyield();  // add yield(); command to code if platform is ESP32 or ESP8266
     int  getProtocol();                      // get protocol number
     void setProtocol(int _protocol_no);      // set protocol number  (ovverides PV_INVERTER::begin) //0 no CRC add, 1 HPS, 2 MAX
 
-    void console_data(pipVals_t _thisPIP);
-    int  handle_automation(int _hour, int _min,  bool _CRChardcoded);
-    int  ask_data(uint32_t _now,  bool _CRChardcoded);
+    String debug_QPIGS(pipVals_t _thisPIP);
+    int  handle_automation(int _hour, int _min,  bool _CRChardcoded = false);
+    int  ask_data(uint32_t _now,  bool _CRChardcoded = false);
     
 
 /***************************************** private commands *******************************/
@@ -262,17 +252,16 @@ class PV_INVERTER
     void store_QPIGS(String value, uint32_t _now);
     void clear_pipvals (pipVals_t &_thisPIP);
     void smoothing_QPIGS();
-    void store_status();
     bool rap();
     String addCRC(String _cmd);
     char read(char _cmd);
-    int receive( String cmd, String& str_return,  bool _CRChardcoded ); // 0 = successfull
+    int receive( String _cmd, String& str_return,  bool _CRChardcoded = false ); // 0 = successfull
                                                             // 1 = No serial communication
                                                             // 2 = Not recognized command  // error codes should be positive integers                                                        
     int send ( String inv_command, bool _CRChardcoded = false );       // 0 = serial communication up and running
                                                             // 1 = No serial communication  // should be change to true and false
                                                            
-    void ask_QPIRI( String& _result, bool _CRChardcoded);    
+    void ask_QPIRI( String& _result, bool _CRChardcoded = false);    
     
 
     int _average_count = 0;

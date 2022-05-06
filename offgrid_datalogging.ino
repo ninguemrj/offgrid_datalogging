@@ -176,7 +176,7 @@ void loop()
   {
 
     // Prints on console in VERBOSE mode
-    if (VERBOSE_MODE == 1) inv.console_data(inv.QPIGS_average); 
+    if (VERBOSE_MODE == 1) Serial.println(inv.debug_QPIGS(inv.QPIGS_average)); 
 
     // Store data on SD
     // "_stored_online" fized as "true", as it was not implemented yet
