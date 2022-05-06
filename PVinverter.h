@@ -17,6 +17,10 @@
   #include <SoftwareSerial.h>
 #endif
 
+#ifndef SUPPORT_FUNCTIONS_H
+  #include "support_functions.h"
+#endif
+
 class PV_INVERTER
 {
    public:

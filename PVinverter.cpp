@@ -359,32 +359,32 @@ void PV_INVERTER::clear_pipvals (pipVals_t &_thisPIP)
 
 String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
 {
-  String _response = String("UNIX TIME:............... ") + String(_thisPIP._unixtime) + " Seconds\n\r" +
-  "Grid Voltage:............ " + String(_thisPIP.gridVoltage) + " V\n\r"             +
-  "Grid Frequency:.......... " + String(_thisPIP.gridFrequency/10.0) + " Hz\n\r"     +
-  "AC Output:............... " + String(_thisPIP.acOutput) + " V\n\r"                +
-  "AC Frequency:............ " + String(_thisPIP.acFrequency/10.0) + " Hz\n\r"       +
-  "AC ApparentPower:........ " + String(_thisPIP.acApparentPower) + " VA\n\r"        +
-  "AC ActivePower:.......... " + String(_thisPIP.acActivePower) + " W\n\r"           +
-  "Load Percent:............ " + String(_thisPIP.loadPercent) + " %\n\r"             +
-  "Bus Voltage:............. " + String(_thisPIP.busVoltage) + " V\n\r"              + 
-  "Battery Voltage:......... " + String(_thisPIP.batteryVoltage/100.00)+ " V\n\r"    +
-  "Battery ChargeCurrent:... " + String(_thisPIP.batteryChargeCurrent) + " A\n\r"    + 
-  "Battery Charge:.......... " + String(_thisPIP.batteryCharge) + " %\n\r"           + 
-  "PV_INVERTER Temperature:. " + String(_thisPIP.inverterTemperature) + "C\n\r"      + 
-  "PV Current:.............. " + String(_thisPIP.PVCurrent /10.0)+ " A\n\r"          +
-  "PV Voltage:.............. " + String(_thisPIP.PVVoltage /10.0) + " V\n\r"         + 
-  "PV Power:................ " + String(_thisPIP.PVPower   /100.00) + " W\n\r"       +  
-  "Battery SCC:............. " + String(_thisPIP.batterySCC/100.00) + " V\n\r"       + 
-  "Batt DischargeCurrent:... " + String(_thisPIP.batteryDischargeCurrent) + " A\n\r" + 
-  "DevStat_SBUpriority:..... " + String(_thisPIP.DevStat_SBUpriority) + " \n\r"      + 
-  "DevStat_ConfigStatus:.... " + String(_thisPIP.DevStat_ConfigStatus) + " \n\r"     + 
-  "DevStat_FwUpdate:........ " + String(_thisPIP.DevStat_FwUpdate) + " \n\r"         + 
-  "DevStat_LoadStatus:...... " + String(_thisPIP.DevStat_LoadStatus) + " \n\r"       + 
-  "DevStat_BattVoltSteady:.. " + String(_thisPIP.DevStat_BattVoltSteady) + " \n\r"   + 
-  "DevStat_Chargingstatus:.. " + String(_thisPIP.DevStat_Chargingstatus) + " \n\r"   + 
-  "DevStat_SCCcharge:....... " + String(_thisPIP.DevStat_SCCcharge) + " \n\r"        + 
-  "DevStat_ACcharge:........ " + String(_thisPIP.DevStat_ACcharge) + " \n\r"; 
+  String _response = String("UNIX TIME:................ ") + String(_thisPIP._unixtime) + " Seconds\n\r" +
+  "Grid Voltage:............. " + String(_thisPIP.gridVoltage) + " V\n\r"             +
+  "Grid Frequency:........... " + String(_thisPIP.gridFrequency/10.0) + " Hz\n\r"     +
+  "AC Output:................ " + String(_thisPIP.acOutput) + " V\n\r"                +
+  "AC Frequency:............. " + String(_thisPIP.acFrequency/10.0) + " Hz\n\r"       +
+  "AC ApparentPower:......... " + String(_thisPIP.acApparentPower) + " VA\n\r"        +
+  "AC ActivePower:........... " + String(_thisPIP.acActivePower) + " W\n\r"           +
+  "Load Percent:............. " + String(_thisPIP.loadPercent) + " %\n\r"             +
+  "Bus Voltage:.............. " + String(_thisPIP.busVoltage) + " V\n\r"              + 
+  "Battery Voltage:.......... " + String(_thisPIP.batteryVoltage/100.00)+ " V\n\r"    +
+  "Battery ChargeCurrent:.... " + String(_thisPIP.batteryChargeCurrent) + " A\n\r"    + 
+  "Battery Charge:........... " + String(_thisPIP.batteryCharge) + " %\n\r"           + 
+  "PV_INVERTER Temperature:.. " + String(_thisPIP.inverterTemperature) + "C\n\r"      + 
+  "PV Current:............... " + String(_thisPIP.PVCurrent /10.0)+ " A\n\r"          +
+  "PV Voltage:............... " + String(_thisPIP.PVVoltage /10.0) + " V\n\r"         + 
+  "PV Power:................. " + String(_thisPIP.PVPower   /100.00) + " W\n\r"       +  
+  "Battery SCC:.............. " + String(_thisPIP.batterySCC/100.00) + " V\n\r"       + 
+  "Batt DischargeCurrent:.... " + String(_thisPIP.batteryDischargeCurrent) + " A\n\r" + 
+  "DevStat_SBUpriority:...... " + String(_thisPIP.DevStat_SBUpriority) + " \n\r"      + 
+  "DevStat_ConfigStatus:..... " + String(_thisPIP.DevStat_ConfigStatus) + " \n\r"     + 
+  "DevStat_FwUpdate:......... " + String(_thisPIP.DevStat_FwUpdate) + " \n\r"         + 
+  "DevStat_LoadStatus:....... " + String(_thisPIP.DevStat_LoadStatus) + " \n\r"       + 
+  "DevStat_BattVoltSteady:... " + String(_thisPIP.DevStat_BattVoltSteady) + " \n\r"   + 
+  "DevStat_Chargingstatus:... " + String(_thisPIP.DevStat_Chargingstatus) + " \n\r"   + 
+  "DevStat_SCCcharge:........ " + String(_thisPIP.DevStat_SCCcharge) + " \n\r"        + 
+  "DevStat_ACcharge:......... " + String(_thisPIP.DevStat_ACcharge) + " \n\r"; 
 
 
 
@@ -401,12 +401,12 @@ String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
   
   // QPIRI values: TODO: Move to a different function
   _response += 
-  String("Bat Back to Grid:........ ") + String(_thisPIP.bat_backToUtilityVolts/10.0) + " V\n\r"   + 
-  "Bat Bulk Charge:......... " + String(_thisPIP.bat_bulkChargeVolts/10.0) + " V\n\r"              + 
-  "Bat Float Charge:........ " + String(_thisPIP.bat_FloatChargeVolts/10.0) + " V\n\r"             + 
-  "Bat CutOff:.............. " + String(_thisPIP.bat_CutOffVolts/10.0) + " V\n\r"                  + 
-  "Output Priority:......... " + String(_thisPIP.OutPutPriority) + " | 0: Utility first / 1: Solar first / 2: SBU first\n\r"   + 
-  "Charging Priority:....... " + String(_thisPIP.ChargerSourcePriority) + " | 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar\n\r";
+  String("Bat Back to Grid:......... ") + String(_thisPIP.bat_backToUtilityVolts/10.0) + " V\n\r"   + 
+  "Bat Bulk Charge:.......... " + String(_thisPIP.bat_bulkChargeVolts/10.0) + " V\n\r"              + 
+  "Bat Float Charge:......... " + String(_thisPIP.bat_FloatChargeVolts/10.0) + " V\n\r"             + 
+  "Bat CutOff:............... " + String(_thisPIP.bat_CutOffVolts/10.0) + " V\n\r"                  + 
+  "Output Priority:.......... " + String(_thisPIP.OutPutPriority) + " | 0: Utility first / 1: Solar first / 2: SBU first\n\r"   + 
+  "Charging Priority:........ " + String(_thisPIP.ChargerSourcePriority) + " | 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar\n\r";
 
    return _response;
 }
@@ -569,7 +569,7 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
           // prepare for a new banchmarck
           _average_oldtime = millis();
         }
-        //if (_VERBOSE_MODE == 1) Serial.println(this->debug_QPIGS(QPIGS_values)); 
+        if (_VERBOSE_MODE == 1) SUPPORT_FUNCTIONS::debugMsg(3, this->debug_QPIGS(QPIGS_values)); 
       }
       return _funct_return;    
     }
