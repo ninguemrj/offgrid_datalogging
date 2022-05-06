@@ -191,6 +191,10 @@
         xhttp.onreadystatechange = function () {
             if (this.readyState == 4 && this.status == 200) {
                 var receivedString = this.responseText;
+                if (receivedString == "sun_plug") {
+                    document.getElementById("energy1").setAttribute("src", "sun-on.png");  
+                    document.getElementById("energy2").setAttribute("src", "plug-on.png");  
+                }
                 if (receivedString == "sun") {
                     document.getElementById("energy1").setAttribute("src", "sun-on.png");
                     document.getElementById("energy2").setAttribute("src", "plug-off.png");  
@@ -198,10 +202,6 @@
                 if (receivedString == "plug") {
                     document.getElementById("energy1").setAttribute("src", "plug-on.png");
                     document.getElementById("energy2").setAttribute("src", "sun-off.png");  
-                }
-                if (receivedString == "sun-plug") {
-                    document.getElementById("energy1").setAttribute("src", "sun-on.png");  
-                    document.getElementById("energy2").setAttribute("src", "plug-on.png");  
                 }
                 if (receivedString == "off") {
                     document.getElementById("energy1").setAttribute("src", "plug-off.png");
