@@ -19,7 +19,8 @@
 #include <ArduinoJson.h>
 #include "SQLITE_inverter.h"
 
-
+extern String PV_INVERTER::debug_QPIGS(PV_INVERTER::pipVals_t _thisPIP);
+    
 class WEBSERVER_INVERTER
 {
   public:

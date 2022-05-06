@@ -182,7 +182,7 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
   //--- DEBUG INFO from pipvals ---------------------
   _server.on("/debug", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
   {
-    request->send(200, "text/plain", PV_INVERTER::debug_QPIGS(_thisPIP));
+    request->send(200, "text/plain", debug_QPIGS(*_thisPIP));
   });
 
 
