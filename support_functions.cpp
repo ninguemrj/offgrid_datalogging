@@ -17,7 +17,7 @@
 
 
 // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
-void PV_INVERTER::debugMsg(int _level, char _msg)
+void SUPPORT_FUNCTIONS::debugMsg(int _level, char _msg)
 {
   if (_VERBOSE_MODE == 1) 
   {
@@ -27,7 +27,7 @@ void PV_INVERTER::debugMsg(int _level, char _msg)
 
 
 // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
-void PV_INVERTER::debugMsg(int _level, String _msg)
+void SUPPORT_FUNCTIONS::debugMsg(int _level, String _msg)
 {
   if (_VERBOSE_MODE == 1) 
   {
