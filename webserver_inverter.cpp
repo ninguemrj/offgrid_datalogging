@@ -56,19 +56,19 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
   {
     String _response = "";
 
-    if (_thisPIP->deviceStatus2[0] == 1)
+    if (_thisPIP->DevStat_Chargingstatus == 1)
     {
-      if ((_thisPIP->deviceStatus2[1] == 1) && (_thisPIP->deviceStatus2[2] == 1))
+      if (_thisPIP->ChargerSourcePriority == 2)
       {
         _response = "sun_plug";
       }
       else
       {
-        if (_thisPIP->deviceStatus2[1] == 1)
+        if (_thisPIP->ChargerSourcePriority == 3)
         {
           _response = "sun";
         }
-        if (_thisPIP->deviceStatus2[2] == 1)
+        if (_thisPIP->ChargerSourcePriority == 0)
         {
           _response = "plug";
         }
@@ -178,6 +178,12 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER::pipV
     request->send(SPIFFS, "/plug-on.png");
   });
 
+
+  //--- DEBUG INFO from pipvals ---------------------
+  _server.on("/debug", HTTP_GET, [_thisPIP](AsyncWebServerRequest *request)
+  {
+    request->send(200, "text/plain", PV_INVERTER::debug_QPIGS(_thisPIP));
+  });
 
 
   //--- Start web server ------------

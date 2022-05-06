@@ -63,20 +63,20 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         SQL_QPIGS[_rows].PVPower                  = sqlite3_column_int(res, 15);
         SQL_QPIGS[_rows].batterySCC               = sqlite3_column_int(res, 16);
         SQL_QPIGS[_rows].batteryDischargeCurrent  = sqlite3_column_int(res, 17);
-        SQL_QPIGS[_rows].deviceStatus[0]          = sqlite3_column_int(res, 18);
-        SQL_QPIGS[_rows].deviceStatus[1]          = sqlite3_column_int(res, 19);
-        SQL_QPIGS[_rows].deviceStatus[2]          = sqlite3_column_int(res, 20);
-        SQL_QPIGS[_rows].deviceStatus[3]          = sqlite3_column_int(res, 21);
-        SQL_QPIGS[_rows].deviceStatus[4]          = sqlite3_column_int(res, 22);
-        SQL_QPIGS[_rows].deviceStatus[5]          = sqlite3_column_int(res, 23);
-        SQL_QPIGS[_rows].deviceStatus[6]          = sqlite3_column_int(res, 24);
-        SQL_QPIGS[_rows].deviceStatus[7]          = sqlite3_column_int(res, 25);
+        SQL_QPIGS[_rows].DevStat_SBUpriority      = sqlite3_column_int(res, 18);
+        SQL_QPIGS[_rows].DevStat_ConfigStatus     = sqlite3_column_int(res, 19);
+        SQL_QPIGS[_rows].DevStat_FwUpdate         = sqlite3_column_int(res, 20);
+        SQL_QPIGS[_rows].DevStat_LoadStatus       = sqlite3_column_int(res, 21);
+        SQL_QPIGS[_rows].DevStat_BattVoltSteady   = sqlite3_column_int(res, 22);
+        SQL_QPIGS[_rows].DevStat_Chargingstatus   = sqlite3_column_int(res, 23);
+        SQL_QPIGS[_rows].DevStat_SCCcharge        = sqlite3_column_int(res, 24);
+        SQL_QPIGS[_rows].DevStat_ACcharge         = sqlite3_column_int(res, 25);
         SQL_QPIGS[_rows].batOffsetFan             = sqlite3_column_int(res, 26);
         SQL_QPIGS[_rows].eepromVers               = sqlite3_column_int(res, 27);
         SQL_QPIGS[_rows].PV1_chargPower           = sqlite3_column_int(res, 28);
-        SQL_QPIGS[_rows].deviceStatus2[0]         = sqlite3_column_int(res, 29);
-        SQL_QPIGS[_rows].deviceStatus2[1]         = sqlite3_column_int(res, 30);
-        SQL_QPIGS[_rows].deviceStatus2[2]         = sqlite3_column_int(res, 31);
+        SQL_QPIGS[_rows].DevStat_chargingFloatMode= sqlite3_column_int(res, 29);
+        SQL_QPIGS[_rows].DevStat_SwitchOn         = sqlite3_column_int(res, 30);
+        SQL_QPIGS[_rows].DevStat_dustProof        = sqlite3_column_int(res, 31);
 
         Serial.println("Column: _unixtime  | Data: " + String(SQL_QPIGS[_rows]._unixtime) + "|  ROW num: " + String(_rows));
 
@@ -114,20 +114,20 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
       String(_thisPIP.PVPower)                  + "," +
       String(_thisPIP.batterySCC)               + "," +
       String(_thisPIP.batteryDischargeCurrent)  + "," +
-      String(_thisPIP.deviceStatus[0])          + "," +
-      String(_thisPIP.deviceStatus[1])          + "," +
-      String(_thisPIP.deviceStatus[2])          + "," +
-      String(_thisPIP.deviceStatus[3])          + "," +
-      String(_thisPIP.deviceStatus[4])          + "," +
-      String(_thisPIP.deviceStatus[5])          + "," +
-      String(_thisPIP.deviceStatus[6])          + "," +
-      String(_thisPIP.deviceStatus[7])          + "," +
+      String(_thisPIP.DevStat_SBUpriority)      + "," +
+      String(_thisPIP.DevStat_ConfigStatus)     + "," +
+      String(_thisPIP.DevStat_FwUpdate)         + "," +
+      String(_thisPIP.DevStat_LoadStatus)       + "," +
+      String(_thisPIP.DevStat_BattVoltSteady)   + "," +
+      String(_thisPIP.DevStat_Chargingstatus)   + "," +
+      String(_thisPIP.DevStat_SCCcharge)        + "," +
+      String(_thisPIP.DevStat_ACcharge)         + "," +
       String(_thisPIP.batOffsetFan)             + "," +
       String(_thisPIP.eepromVers)               + "," +
       String(_thisPIP.PV1_chargPower)           + "," +
-      String(_thisPIP.deviceStatus2[0])         + "," +
-      String(_thisPIP.deviceStatus2[1])         + "," +
-      String(_thisPIP.deviceStatus2[2])         +
+      String(_thisPIP.DevStat_chargingFloatMode)+ "," +
+      String(_thisPIP.DevStat_SwitchOn)         + "," +
+      String(_thisPIP.DevStat_dustProof)        +
       ");";
       
     if (_VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SQLITEr: SQL Cmd line: |" + _QPIGS_line + "|END.");
