@@ -18,6 +18,7 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include "SQLITE_inverter.h"
+#include "config.h"
 
 class WEBSERVER_INVERTER
 {

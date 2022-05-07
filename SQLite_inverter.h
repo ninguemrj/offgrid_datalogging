@@ -43,6 +43,7 @@
 //#include <SPI.h>
 #include <FS.h>
 #include "SD.h"
+#include "config.h"
 
 
 class SQLITE_INVERTER
