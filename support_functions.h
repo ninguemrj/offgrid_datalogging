@@ -29,12 +29,12 @@
   #include "time.h"
 #endif
 
+#include "config.h"
 
 class SUPPORT_FUNCTIONS
 {
   public:
-    static void debugMsg(int _level, char _msg);    // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
-    static void debugMsg(int _level, String _msg);  // 0 = INFO / 1 = Warning / 3 = ERROR / 4 = Debug-Verbose
+    static void logMsg(int _level, String _msg);  // 0 = INFO / 1 = Warning / 2 = ERROR / 3 = Debug / 4 = Benchmark
 
 
 };
