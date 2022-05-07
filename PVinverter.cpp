@@ -39,8 +39,9 @@ void PV_INVERTER::begin(uint32_t _baudRate, int _inverter_protocol, uint8_t _ver
   this->setProtocol(_inverter_protocol);
 
   // Initialize the pipvals and QPIGS_average with zeros (before first read)
-  this->clear_pipvals(QPIGS_values);
-  this->clear_pipvals(QPIGS_average);
+  this->clear_QPIGS(QPIGS_values);
+  this->clear_QPIGS(QPIGS_average);
+  this->clear_QPIRI();
 
 
 }
@@ -52,11 +53,50 @@ void PV_INVERTER::ESPyield()
   #endif
 }
 
-void PV_INVERTER::store_QPIRI(String value)
+/*--- clear_QPIRI() ----------------------------------------------------------------------
+* 
+* Clears infromation from QPIRI structure.
+* Used when the information read from inverter isn't ok, avoiding storing bad data
+------------------------------------------------------------------------------------------*/
+void PV_INVERTER::clear_QPIRI()
 {
-  if (value == "")
+  //3 = debug msg
+  SUPPORT_FUNCTIONS::logMsg(3,"PVInverter: clear_QPIRI: FIRST line");
+  
+  this->QPIRI_values.GridRatingVoltage              = 0;
+  this->QPIRI_values.GridRatingCurrent              = 0;
+  this->QPIRI_values.ACOutputRatingVoltage          = 0;
+  this->QPIRI_values.ACOutputRatingFrequency        = 0;
+  this->QPIRI_values.ACOutputRatingCurrent          = 0;
+  this->QPIRI_values.ACOutputRatingApparentPower    = 0;
+  this->QPIRI_values.ACOutputRatingActivePower      = 0;
+  this->QPIRI_values.BatteryRatingVoltage           = 0;
+  this->QPIRI_values.BatteryReChargeVoltage         = 0;   
+  this->QPIRI_values.BatteryUnderVoltage            = 0;          
+  this->QPIRI_values.BatteryBulkVoltage             = 0;     
+  this->QPIRI_values.BatteryFloatVoltage            = 0;     
+  this->QPIRI_values.BatteryType                    = 0;                    
+  this->QPIRI_values.MaxAC_ChargingCurrent          = 0;     
+  this->QPIRI_values.MaxChargingCurrent             = 0;     
+  this->QPIRI_values.InputVoltageRange              = 0;     
+  this->QPIRI_values.OutputSourcePriority           = 0;                
+  this->QPIRI_values.ChargerSourcePriority          = 0;          
+}
+
+
+/*--- store_QPIRI() ----------------------------------------------------------------------
+* 
+* Pupolates QPIRI structure with data received from inverter.
+*------------------------------------------------------------------------------------------*/
+void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
+{
+  //3 = debug msg
+  SUPPORT_FUNCTIONS::logMsg(3,"PVInverter: store_QPIRI: FIRST: _value" + _value + "| _now" + _now);
+
+  if (_value == "")
   {
-    //--- QPIGS without data, skip this reading and wait next one -----------------  
+    //--- QPIRI without data, skip this reading and wait next one ----------------- 
+    this->clear_QPIRI(); 
     QPIGS_values.bat_backToUtilityVolts = 0;
     QPIGS_values.bat_bulkChargeVolts    = 0;
     QPIGS_values.bat_FloatChargeVolts   = 0;
@@ -66,151 +106,262 @@ void PV_INVERTER::store_QPIRI(String value)
   }
   else
   {
-     //--- Update status with data from PV_INVERTER  ---------------------------------  
+     // Sets provided unixtime as argument for the QPIRI_values
+    this->QPIRI_values._unixtime = _now;
+
+    //--- Update status with data from PV_INVERTER  ---------------------------------  
     char pipInputBuf[200];
     char *val;
     
-    strcpy(pipInputBuf, value.c_str());
+    strcpy(pipInputBuf, _value.c_str());
     
     //--- Now split the packet into the values ------------------------------------
-    val = strtok((char *) pipInputBuf, " ");            // discart the 1st value
-    val = strtok(0, " ");                               // discart the 2nd value
-    val = strtok(0, " ");                               // discart the 3th value
-    val = strtok(0, " ");                               // discart the 4th value
-    val = strtok(0, " ");                               // discart the 5th value
-    val = strtok(0, " ");                               // discart the 6th value
-    val = strtok(0, " ");                               // discart the 7th value
-    val = strtok(0, " ");                               // discart the 8th value
-    val = strtok(0, " ");                               // 9th value -> backToUtilityVolts
-    QPIGS_values.bat_backToUtilityVolts = atof(val) * 10 ;
-    val = strtok(0, " ");                               // 10th value -> bat_CutOffVolts
-    QPIGS_values.bat_CutOffVolts = atof(val) * 10 ;
-    val = strtok(0, " ");                               // 11th value -> bat_bulkChargeVolts
-    QPIGS_values.bat_bulkChargeVolts = atof(val) * 10 ;
-    val = strtok(0, " ");                               // 12th value -> bat_FloatChargeVolts
-    QPIGS_values.bat_FloatChargeVolts = atof(val) * 10 ;
-    val = strtok(0, " ");                               // discart the 13th value
-    val = strtok(0, " ");                               // discart the 14th value
-    val = strtok(0, " ");                               // discart the 15th value
-    val = strtok(0, " ");                               // discart the 16th value
-    val = strtok(0, " ");                               // 17th value -> OutPutPriority 
-    QPIGS_values.OutPutPriority  = atoi(val);
-    val = strtok(0, " ");                               // 18th value -> ChargerSourcePriority
-    QPIGS_values.ChargerSourcePriority  = atoi(val);   
+    val = strtok((char *) pipInputBuf, " ");                 // B = (xxx.x V * 10
+    this->QPIRI_values.GridRatingVoltage  = atof(val+1)*10;
 
-   // ignore the other QPIRI fields
+    val = strtok(0, " ");                                    // C = xx.x A * 10
+    this->QPIRI_values.GridRatingCurrent  = atof(val) * 10 ;
+
+    val = strtok(0, " ");                                    // D = xxx.x V * 10
+    this->QPIRI_values.ACOutputRatingVoltage  = atof(val) * 10 ;
+
+    val = strtok(0, " ");                                    // E = xx.x Hz * 10
+    this->QPIRI_values.ACOutputRatingFrequency  = atof(val) * 10 ;
+
+    val = strtok(0, " ");                                    // F = xx.x A * 10
+    this->QPIRI_values.ACOutputRatingCurrent  = atof(val) * 10 ;
+
+    val = strtok(0, " ");                                    // H = xxxx VA
+    this->QPIRI_values.ACOutputRatingApparentPower  = atoi(val) ;
+
+    val = strtok(0, " ");                                    // I = xxxx W
+    this->QPIRI_values.ACOutputRatingActivePower  = atoi(val) ;
+
+    val = strtok(0, " ");                                    // J = xx.x V * 10
+    this->QPIRI_values.BatteryRatingVoltage  = atof(val) * 10 ;
+
+    val = strtok(0, " ");                                    // K = xx.x V * 10 (battery re-charge or backToUtilityVolts)
+    QPIGS_values.bat_backToUtilityVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryReChargeVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
+    val = strtok(0, " ");                                    // L = xx.x V * 10 bat_CutOffVolts
+    QPIGS_values.bat_CutOffVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryUnderVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
+    
+    val = strtok(0, " ");                                    // M = xx.x V * 10 bat_bulkChargeVolts
+    QPIGS_values.bat_bulkChargeVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryBulkVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
+    
+    val = strtok(0, " ");                                    // N = xx.x V * 10 bat_FloatChargeVolts
+    QPIGS_values.bat_FloatChargeVolts = atof(val) * 10 ;  
+    this->QPIRI_values.BatteryFloatVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
+    
+    val = strtok(0, " ");                                    // O = 0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic
+    this->QPIRI_values.BatteryType = atoi(val);                    
+    
+    val = strtok(0, " ");                                    // P = xxx A
+    this->QPIRI_values.MaxAC_ChargingCurrent = atoi(val);     
+    
+    val = strtok(0, " ");                                    // Q = xx0 A
+    this->QPIRI_values.MaxChargingCurrent = atoi(val);     
+    
+    val = strtok(0, " ");                                    // O = 0: Appliance 1: UPS
+    this->QPIRI_values.InputVoltageRange = atoi(val);     
+    
+    val = strtok(0, " ");                                    // P = 0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility -> OutPutPriority 
+    QPIGS_values.OutPutPriority  = atoi(val);
+    this->QPIRI_values.OutputSourcePriority  = atoi(val);    // doubled to not beak legancy code using QPIGS_Values (need to be removed)
+    
+    val = strtok(0, " ");                                    // Q = 0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 ) -> ChargerSourcePriority
+    QPIGS_values.ChargerSourcePriority  = atoi(val);   
+    this->QPIRI_values.ChargerSourcePriority  = atoi(val);   // doubled to not beak legancy code using QPIGS_Values (need to be removed)  
+
+   // ignore the other QPIRI fields for while
   }
 
 }
 
-void PV_INVERTER::store_QPIGS(String value, uint32_t _now)
+
+String PV_INVERTER::debug_QPIRI()
+{
+  //3 = debug msg
+  SUPPORT_FUNCTIONS::logMsg(3,"PVInverter: debug_QPIRI: First line");
+
+  String _response = String("\n\rUNIX TIME:..................: ") + String(this->QPIRI_values._unixtime) + " Seconds\n\r" +
+  // B = xx.x V * 10
+  "GridRatingVoltage...........: " + String(this->QPIRI_values.GridRatingVoltage / 10.0 ) + " V\n\r" +
+  
+  // C = xx.x A * 10
+  "GridRatingCurrent...........: " + String(this->QPIRI_values.GridRatingCurrent / 10.0 ) + " A\n\r" +
+
+  // D = xxx.x V * 10
+  "ACOutputRatingVoltage.......: " + String(this->QPIRI_values.ACOutputRatingVoltage / 10.0 ) + " V\n\r" +
+
+  // E = xx.x Hz * 10
+  "ACOutputRatingFrequency.....: " + String(this->QPIRI_values.ACOutputRatingFrequency / 10.0 ) + " Hz\n\r" +
+
+  // F = xx.x A * 10
+  "ACOutputRatingCurrent.......: " + String(this->QPIRI_values.ACOutputRatingCurrent / 10.0 ) + " A\n\r" +
+
+  // H = xxxx VA
+  "ACOutputRatingApparentPower.: " + String(this->QPIRI_values.ACOutputRatingApparentPower) + " VA\n\r" +
+
+  // I = xxxx W
+  "ACOutputRatingActivePower...: " + String(this->QPIRI_values.ACOutputRatingActivePower) + " W\n\r" +
+
+  // J = xx.x V * 10
+  "BatteryRatingVoltage........: " + String(this->QPIRI_values.BatteryRatingVoltage / 10.0 ) + " V\n\r" +
+
+  // K = xx.x V * 10 (battery re-charge or backToUtilityVolts)
+  "BatteryReChargeVoltage......: " + String(this->QPIRI_values.BatteryReChargeVoltage/ 10.0 ) + " V (backToUtilityVolts)\n\r" + 
+    
+  // L = xx.x V * 10 bat_CutOffVolts
+  "BatteryUnderVoltage.........: " + String(this->QPIRI_values.BatteryUnderVoltage/ 10.0) + " V (bat_CutOffVolts)\n\r" + 
+    
+  // M = xx.x V * 10 bat_bulkChargeVolts
+  "BatteryBulkVoltage..........: " + String(this->QPIRI_values.BatteryBulkVoltage/ 10.0 ) + " V\n\r" + 
+    
+  // N = xx.x V * 10 bat_FloatChargeVolts
+  "BatteryFloatVoltage.........: " + String(this->QPIRI_values.BatteryFloatVoltage/ 10.0) + " V\n\r" + 
+    
+  // O = 0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic
+  "BatteryType.................: " + String(this->QPIRI_values.BatteryType) + " | 0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic\n\r" +                    
+    
+  // P = xxx A
+  "MaxAC_ChargingCurrent.......: " + String(this->QPIRI_values.MaxAC_ChargingCurrent) + " A\n\r" +     
+    
+  // Q = xx0 A
+  "MaxChargingCurrent..........: " + String(this->QPIRI_values.MaxChargingCurrent) + " A\n\r" +     
+    
+  // O = 0: Appliance 1: UPS
+  "InputVoltageRange...........: " + String(this->QPIRI_values.InputVoltageRange) + " | 0: Appliance 1: UPS\n\r" +     
+    
+  // P = 0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility -> OutPutPriority 
+  "OutputSourcePriority........: " + String(this->QPIRI_values.OutputSourcePriority) + " | 0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility\n\r" +    
+    
+  // Q = 0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 ) -> ChargerSourcePriority
+  "ChargerSourcePriority.......: " + String(this->QPIRI_values.ChargerSourcePriority) + " | 0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted\n\r"; 
+
+   // ignore the other QPIRI fields for while
+
+   return _response;
+}
+
+
+
+/*--- store_QPIGS() ----------------------------------------------------------------------
+* 
+* Pupolates QPIGS structure with data received from inverter.
+*------------------------------------------------------------------------------------------*/
+void PV_INVERTER::store_QPIGS(String _value, uint32_t _now)
 {
 
-  if (value=="")
+  if (_value=="")
   {
-        // Clear pipvals in case of an incomplete or no reading
-     this->clear_pipvals(QPIGS_values);
+    // Clear pipvals in case of an incomplete or no reading
+    this->clear_QPIGS(QPIGS_average);
+
         
-  } else {
+  } 
+  else 
+  {
     
-        // Sets provided unixtime as argument for the QPIGS_values
-        QPIGS_values._unixtime = _now;
- 
-  
-        //--- Update status with data read from inverter serial communication ---------------------------------  
-        char pipInputBuf[500];
-        char *val;
-        
-        strcpy(pipInputBuf, value.c_str());
-        
-        //--- Now split the packet into the values ------------------------------------
-        val = strtok((char *) pipInputBuf, " "); // get the first value
-       if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
-         {
-            QPIGS_values.gridVoltage = atoi(val + 1);  // Skip the initial '('
-         }
-         else
-         {
-            QPIGS_values.gridVoltage = 0;
-         }
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.gridFrequency = atof(val) * 10 ;
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.acOutput = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.acFrequency = atof(val) * 10;
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.acApparentPower = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.acActivePower = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.loadPercent = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.busVoltage = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.batteryVoltage = atof(val)*100;
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.batteryChargeCurrent = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.batteryCharge = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.inverterTemperature = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.PVCurrent = atof(val)*10;
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.PVVoltage = atof(val)*10;
-      
-        QPIGS_values.PVPower = QPIGS_values.PVVoltage * QPIGS_values.PVCurrent; // Calculate PV Power
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.batterySCC = atof(val)*100;
-      
-        val = strtok(0, " "); // Get the next value
-        QPIGS_values.batteryDischargeCurrent = atoi(val);
-      
-        val = strtok(0, " "); // Get the next value
-        char ds_temp[9];
-        strcpy(ds_temp, val);
-        QPIGS_values.DevStat_SBUpriority     = ds_temp[0]-'0';
-        QPIGS_values.DevStat_ConfigStatus    = ds_temp[1]-'0';
-        QPIGS_values.DevStat_FwUpdate        = ds_temp[2]-'0'; 
-        QPIGS_values.DevStat_LoadStatus      = ds_temp[3]-'0'; 
-        QPIGS_values.DevStat_BattVoltSteady  = ds_temp[4]-'0'; 
-        QPIGS_values.DevStat_Chargingstatus  = ds_temp[5]-'0';  
-        QPIGS_values.DevStat_SCCcharge       = ds_temp[6]-'0'; 
-        QPIGS_values.DevStat_ACcharge        = ds_temp[7]-'0'; 
-        
-        if ( this->getProtocol() == 2)   // 2 = 22 fields from QPIGS
-        {
-          val = strtok(0, " "); // Get the next value
-          QPIGS_values.batOffsetFan = atoi(val);
-        
-          val = strtok(0, " "); // Get the next value
-          QPIGS_values.eepromVers = atoi(val);
-        
-          val = strtok(0, " "); // Get the next value
-          QPIGS_values.PV1_chargPower = atoi(val);
-        
-          val = strtok(0, " "); // Get the next value
-          strcpy(ds_temp, val);
-          QPIGS_values.DevStat_chargingFloatMode = ds_temp[0]-'0'; 
-          QPIGS_values.DevStat_SwitchOn          = ds_temp[1]-'0'; 
-          QPIGS_values.DevStat_dustProof         = ds_temp[2]-'0'; 
-        }
+    // Sets provided unixtime as argument for the QPIGS_values
+    QPIGS_values._unixtime = _now;
+    
+    //--- Update status with data read from inverter serial communication ---------------------------------  
+    char pipInputBuf[500];
+    char *val;
+    
+    strcpy(pipInputBuf, _value.c_str());
+    
+    //--- Now split the packet into the values ------------------------------------
+    val = strtok((char *) pipInputBuf, " "); // get the first value
+    if (atof(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
+    {
+      QPIGS_values.gridVoltage = atoi(val + 1);  // Skip the initial '('
+    }
+    else
+    {
+      QPIGS_values.gridVoltage = 0;
+    }
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.gridFrequency = atof(val) * 10 ;
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.acOutput = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.acFrequency = atof(val) * 10;
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.acApparentPower = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.acActivePower = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.loadPercent = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.busVoltage = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.batteryVoltage = atof(val)*100;
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.batteryChargeCurrent = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.batteryCharge = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.inverterTemperature = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.PVCurrent = atof(val)*10;
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.PVVoltage = atof(val)*10;
+    
+    QPIGS_values.PVPower = QPIGS_values.PVVoltage * QPIGS_values.PVCurrent; // Calculate PV Power
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.batterySCC = atof(val)*100;
+    
+    val = strtok(0, " "); // Get the next value
+    QPIGS_values.batteryDischargeCurrent = atoi(val);
+    
+    val = strtok(0, " "); // Get the next value
+    char ds_temp[9];
+    strcpy(ds_temp, val);
+    QPIGS_values.DevStat_SBUpriority     = ds_temp[0]-'0';
+    QPIGS_values.DevStat_ConfigStatus    = ds_temp[1]-'0';
+    QPIGS_values.DevStat_FwUpdate        = ds_temp[2]-'0'; 
+    QPIGS_values.DevStat_LoadStatus      = ds_temp[3]-'0'; 
+    QPIGS_values.DevStat_BattVoltSteady  = ds_temp[4]-'0'; 
+    QPIGS_values.DevStat_Chargingstatus  = ds_temp[5]-'0';  
+    QPIGS_values.DevStat_SCCcharge       = ds_temp[6]-'0'; 
+    QPIGS_values.DevStat_ACcharge        = ds_temp[7]-'0'; 
+    
+    if ( this->getProtocol() == 2)   // 2 = 22 fields from QPIGS
+    {
+      val = strtok(0, " "); // Get the next value
+      QPIGS_values.batOffsetFan = atoi(val);
+    
+      val = strtok(0, " "); // Get the next value
+      QPIGS_values.eepromVers = atoi(val);
+    
+      val = strtok(0, " "); // Get the next value
+      QPIGS_values.PV1_chargPower = atoi(val);
+    
+      val = strtok(0, " "); // Get the next value
+      strcpy(ds_temp, val);
+      QPIGS_values.DevStat_chargingFloatMode = ds_temp[0]-'0'; 
+      QPIGS_values.DevStat_SwitchOn          = ds_temp[1]-'0'; 
+      QPIGS_values.DevStat_dustProof         = ds_temp[2]-'0'; 
+    }
   }
 }
 
@@ -304,7 +455,7 @@ void PV_INVERTER::smoothing_QPIGS()
         }
 
         //--- RESETs the _QPIGS_tempAverage values to not accummulate the next 10 readings with previous ones ----
-        this->clear_pipvals(_QPIGS_tempAverage);
+        this->clear_QPIGS(_QPIGS_tempAverage);
 
         //--- RESETs average counting -----------------------------------------------------
         _average_count = 0;  
@@ -317,7 +468,12 @@ void PV_INVERTER::smoothing_QPIGS()
   }
 }
 
-void PV_INVERTER::clear_pipvals (pipVals_t &_thisPIP)
+/*--- clear_QPIGS() ----------------------------------------------------------------------
+* 
+* Clears infromation from QPIRI structure.
+* Used when the information read from inverter isn't ok, avoiding storing bad data
+------------------------------------------------------------------------------------------*/
+void PV_INVERTER::clear_QPIGS (pipVals_t &_thisPIP)
 {
     _thisPIP.gridVoltage              = 0;
     _thisPIP.gridFrequency            = 0;
@@ -359,7 +515,7 @@ void PV_INVERTER::clear_pipvals (pipVals_t &_thisPIP)
 
 String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
 {
-  String _response = String("UNIX TIME:................ ") + String(_thisPIP._unixtime) + " Seconds\n\r" +
+  String _response = String("\n\rUNIX TIME:................ ") + String(_thisPIP._unixtime) + " Seconds\n\r" +
   "Grid Voltage:............. " + String(_thisPIP.gridVoltage) + " V\n\r"             +
   "Grid Frequency:........... " + String(_thisPIP.gridFrequency/10.0) + " Hz\n\r"     +
   "AC Output:................ " + String(_thisPIP.acOutput) + " V\n\r"                +
@@ -471,20 +627,23 @@ int PV_INVERTER::receive( String _cmd, String &str_return,  bool _CRChardcoded )
       // checking Command not recognized 
       if (str_return == "(NAKss") 
       {
-        Serial.println("PV_INVERTER: " + _cmd + ": Not recognized command: " + str_return);
+        // 2 = error msg
+        SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: " + _cmd + ": Not recognized command: " + str_return);
         return 2;   
       }
 
       // TODO: TEST for CRC receipt match with calculated CRC
       
-      if (_VERBOSE_MODE == 1)
-        Serial.println("PV_INVERTER: " + _cmd + ": Command executed successfully. Returned: " + str_return);
+      // 3 = debug msg
+      SUPPORT_FUNCTIONS::logMsg(3, "PV_INVERTER: " + _cmd + ": Command executed successfully. Returned: " + str_return);
+
       return 0;
     }
     else
     {
       // No serial communication
-      Serial.println("PV_INVERTER: " + _cmd + ": No serial communication");
+      // 2 = error msg
+      SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: " + _cmd + ": No serial communication");
       str_return = "";
       return 1;
     }
@@ -495,7 +654,10 @@ void PV_INVERTER::ask_QPIRI( String &_result, bool _CRChardcoded)
   {
       int _funct_return = 0;
       _result = "";
-      
+
+      // 3 = debug msg
+      SUPPORT_FUNCTIONS::logMsg(3, "PV_INVERTER: ask_QPIRI: before this->receive | _CRChardcoded = |" + String(_CRChardcoded) + "|.  Returned: " + _result);
+
       //workaround for diff CRC then calculated. Check a better way to do it later
       if (_CRChardcoded)
       {
@@ -505,13 +667,16 @@ void PV_INVERTER::ask_QPIRI( String &_result, bool _CRChardcoded)
       {
         _funct_return = this->receive(QPIRI, _result);
       }
+      // 3 = debug msg
+      SUPPORT_FUNCTIONS::logMsg(3, "PV_INVERTER: ask_QPIRI: after this->receive | _CRChardcoded = |" + String(_CRChardcoded) + "|.  _funct_return: " + _funct_return + " | _result: " + _result);
       
       if (_funct_return == 0) 
       {
         // checking return string lengh for QPIRI command 
         if (strlen(_result.c_str()) < 85)       
         {
-          Serial.println("PV_INVERTER: QPIRI: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+          // 2 = error msg
+          SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: QPIRI: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
           _result = "";                                    // clear the string result from PV_INVERTER as it is not complete
           _funct_return = 1;                              // short string lengh for QPIRI command 
         }
@@ -534,19 +699,25 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
       } 
       if (_funct_return == 0) 
       {
-        if (_VERBOSE_MODE == 1)
-          Serial.println("PV_INVERTER: QPIGS: Receipt string size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+        //debug msg
+        SUPPORT_FUNCTIONS::logMsg(3, "PV_INVERTER: QPIGS: Receipt string size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
         
         // checking return string lengh for QPIGS command 
         if (strlen(_result.c_str()) < 85)       
         {
-          Serial.println("PV_INVERTER: QPIGS: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
+          //2 = error msg
+          SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: QPIGS: Receipt string is not completed, size = |" + String(strlen(_result.c_str())) + "|.  Returned: " + _result);
           _result = "";                                 // clear the string result from PV_INVERTER as it is not complete
           _funct_return = 1;                            // short string lengh for QPIGS command 
         }
 
-        this->store_QPIGS(_result.c_str(), _now);               // Updates with direct reading from inverter
-        this->smoothing_QPIGS();                          // accumulates, average and updates QPIGS_average.
+        this->store_QPIGS(_result.c_str(), _now);       // Updates with direct reading from inverter
+        //3 = debug msg
+        SUPPORT_FUNCTIONS::logMsg(3,"After store_QPIGS");
+        this->smoothing_QPIGS();                        // accumulates, average and updates QPIGS_average.
+        //3 = debug msg
+        SUPPORT_FUNCTIONS::logMsg(3,"After smoothing_QPIGS: _average_count: " + String(_average_count));
+
         
         // Ask Inverer for QPIRI configuration in the 10th QPIGS reading (0 to 9)
         // (when the averaged amount will be stored in the public variables)
@@ -554,22 +725,30 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
         {
         
           // Reads QPIRI command to check battery configurations
-          // TODO: Read all QPIRI fields
           
           String _QPIRI_result;
           this->ask_QPIRI(_QPIRI_result, _CRChardcoded);
+          //3 = debug msg
+          SUPPORT_FUNCTIONS::logMsg(3,"After ask_QPIRI");
   
           // store QPIRI info
-          this->store_QPIRI(_QPIRI_result);
+          this->store_QPIRI(_QPIRI_result, _now);
+          //3 = debug msg
+          SUPPORT_FUNCTIONS::logMsg(3,"After store_QPIRI");
   
           //--- For benchmarking the averaged Solar PV_INVERTER communication ---------------------------      
-          if (_VERBOSE_MODE == 2)
-            Serial.println ("Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
-  
+          // 4 = benchmark msg
+          SUPPORT_FUNCTIONS::logMsg(4, "Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
+          
+          // 3 = debug msg
+          SUPPORT_FUNCTIONS::logMsg(3, this->debug_QPIRI()); 
+
+          
           // prepare for a new banchmarck
           _average_oldtime = millis();
         }
-        if (_VERBOSE_MODE == 1) SUPPORT_FUNCTIONS::debugMsg(3, this->debug_QPIGS(QPIGS_values)); 
+        //3 = debug msg
+        SUPPORT_FUNCTIONS::logMsg(3, this->debug_QPIGS(QPIGS_values)); 
       }
       return _funct_return;    
     }
@@ -609,13 +788,15 @@ int PV_INVERTER::handle_automation(int _hour, int _min,  bool _CRChardcoded)
           }
           if ( _funct_return == 0)                   
           {
-             Serial.println ("--INFO: PV_INVERTER: POP01: Output Priority set to Solar/Grid/Battery");
-             _POP_status = POP01;
+            // 0 = info msg
+            SUPPORT_FUNCTIONS::logMsg(0, "PV_INVERTER: POP01: Output Priority set to Solar/Grid/Battery");
+            _POP_status = POP01;
           }
           else
           {
-             // Needs to treat errors for better error messages
-             Serial.println("-- ERROR: PV_INVERTER: POP01: Failed to set Output Priority to Solar/Grid/Battery. PV_INVERTER Returned: " + _result);       
+            // Needs to treat errors for better error messages
+            // 2 = error msg
+            SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: POP01: Failed to set Output Priority to Solar/Grid/Battery. PV_INVERTER Returned: " + _result);
           }
         }
       }
@@ -644,13 +825,15 @@ int PV_INVERTER::handle_automation(int _hour, int _min,  bool _CRChardcoded)
           
           if ( _funct_return == 0)                   
           {
-             Serial.println ("--INFO: PV_INVERTER: POP02: Output Priority set to Solar/Battery/Grid");
-             _POP_status = POP02;
+            // 0 = info msg
+            SUPPORT_FUNCTIONS::logMsg(0, "PV_INVERTER: POP02: Output Priority set to Solar/Battery/Grid");     
+            _POP_status = POP02;
           }
           else
           {
             // Needs to treat errors for better error messages
-             Serial.println("-- ERROR: PV_INVERTER: POP02: Failed to set Output Priority to Solar/Battery/Grid. PV_INVERTER Returned: " + _result);       
+            // 2 = error msg
+            SUPPORT_FUNCTIONS::logMsg(2, "PV_INVERTER: POP02: Failed to set Output Priority to Solar/Battery/Grid. PV_INVERTER Returned: " + _result);     
           }
         }
       }

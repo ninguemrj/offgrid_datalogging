@@ -21,6 +21,8 @@
   #include "support_functions.h"
 #endif
 
+#include "config.h"
+
 class PV_INVERTER
 {
    public:
@@ -77,7 +79,7 @@ class PV_INVERTER
 
     // Structure to store the data for QPIGS
     struct pipVals_t {
-      uint32_t _unixtime;
+      uint32_t _unixtime;               // When the strucure was read from inverter (epoch in seconds)
       uint32_t gridVoltage;             // xxx V   
       uint32_t gridFrequency;           // xx.xx Hz  * 10
       uint32_t acOutput;                // xxx V   
@@ -118,29 +120,30 @@ class PV_INVERTER
       
     } QPIGS_values;
 
-  struct QpiriVals_t  // Device Rating Information inquiry
+  struct QPIRIvals_t  // Device Rating Information inquiry
     {
-      uint32_t GridRatingVoltage;           // Grid rating voltage              xx.x V * 10
-      uint32_t GridRatingCurrent;           // Grid rating current              xx.x A * 10
-      uint32_t OutputRatingVoltage;         // AC output rating                 voltage xxx.x V * 10
-      uint32_t OutputRatingFrequency;       // AC output rating                 frequency xx.x Hz * 10
-      uint32_t OutputRatingCurrent;         // AC output rating current         xx.x A * 10
-      uint32_t OutputRatingApparentPower;   // AC output rating apparent power  xxxx VA
-      uint32_t OutputRatingActivePower;     // AC output rating active power    xxxx W
-      uint32_t BatteryRatingVoltage;        // Battery rating voltage           xx.x V * 10
-      uint32_t BatteryReChargeVoltage;      // Battery re-charge voltage        xx.x V * 10
-      uint32_t BatteryUnderVoltage;         // Battery under voltage            xx.x V * 10
-      uint32_t BatteryBulkVoltage;          // Battery bulk voltage             xx.x V * 10
-      uint32_t BatteryFloatVoltage;         // Battery float voltage            xx.x V * 10
-      uint8_t  BatteryType;                 // Battery type 0-9             0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic (5,6,8,9 protocol 2 )
-      uint32_t MaxAC_ChargingCurrent;        // Max AC charging current          xxx A
-      uint32_t MaxChargingCurrent;          // Max charging current             xxx A
-      uint8_t  InputVoltageRange;           // input voltage range 0-1      0: Appliance 1: UPS
-      uint8_t  OutputSourcePriority;        // output source priority 0-2   0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility
-      uint8_t  ChargerSourcePriority;       // charger source priority 0-3  0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 )
+      uint32_t _unixtime;                    // When the strucure was read from inverter (epoch in seconds) 
+      uint32_t GridRatingVoltage;           // Grid rating voltage               xx.x V * 10
+      uint32_t GridRatingCurrent;           // Grid rating current               xx.x A * 10
+      uint32_t ACOutputRatingVoltage;       // AC output rating voltage          xxx.x V * 10
+      uint32_t ACOutputRatingFrequency;     // AC output rating frequency        xx.x Hz * 10
+      uint32_t ACOutputRatingCurrent;       // AC output rating current          xx.x A * 10
+      uint32_t ACOutputRatingApparentPower; // AC output rating apparent power   xxxx VA
+      uint32_t ACOutputRatingActivePower;   // AC output rating active power     xxxx W
+      uint32_t BatteryRatingVoltage;        // Battery rating voltage            xx.x V * 10
+      uint32_t BatteryReChargeVoltage;      // Battery re-charge voltage         xx.x V * 10
+      uint32_t BatteryUnderVoltage;         // Battery under voltage             xx.x V * 10
+      uint32_t BatteryBulkVoltage;          // Battery bulk voltage              xx.x V * 10
+      uint32_t BatteryFloatVoltage;         // Battery float voltage             xx.x V * 10
+      uint8_t  BatteryType;                 // Battery type 0-9                  0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic (5,6,8,9 protocol 2 )
+      uint8_t  MaxAC_ChargingCurrent;       // Max AC charging current           xxx A
+      uint8_t  MaxChargingCurrent;          // Max charging current              xxx A
+      uint8_t  InputVoltageRange;           // input voltage range 0-1           0: Appliance 1: UPS
+      uint8_t  OutputSourcePriority;        // output source priority 0-2        0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility
+      uint8_t  ChargerSourcePriority;       // charger source priority 0-3       0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 )
       uint8_t  ParallelMaxNum;              // parallel max num 0-9
-      uint16_t MachineType;                 // Machine type                 00: Grid tie; 01: Off Grid; 10: Hybrid.
-      uint8_t  Topology;                    // Topology                     0: transformerless 1: transformer
+      uint8_t  MachineType;                 // Machine type                      00: Grid tie; 01: Off Grid; 10: Hybrid.
+      uint8_t  Topology;                    // Topology                          0: transformerless 1: transformer
       uint8_t  OutputMode;                  // Output mode 0-7
                                                   // 00: single machine output 
                                                   // 01: parallel output 02: Phase 1 of 3 Phase output
@@ -162,7 +165,7 @@ class PV_INVERTER
                                                   // 1: On-line mode
                                                   // 2: ECO mode
       uint8_t  MaxDischargingCurrent;       // Max discharging current (only 48V model)     xxx A
-    } QpiriVals;
+    } QPIRI_values;
 
     struct QpiMessage
     {
@@ -239,6 +242,7 @@ class PV_INVERTER
     void setProtocol(int _protocol_no);      // set protocol number  (ovverides PV_INVERTER::begin) //0 no CRC add, 1 HPS, 2 MAX
 
     String debug_QPIGS(pipVals_t _thisPIP);
+    String debug_QPIRI();
     int  handle_automation(int _hour, int _min,  bool _CRChardcoded = false);
     int  ask_data(uint32_t _now,  bool _CRChardcoded = false);
     
@@ -252,9 +256,10 @@ class PV_INVERTER
     uint8_t _VERBOSE_MODE;
 
     int _inverter_protocol;    // "1" = 18 fields from QPIGS / "2" = 22 fields from QPIGS 
-    void store_QPIRI(String value);
-    void store_QPIGS(String value, uint32_t _now);
-    void clear_pipvals (pipVals_t &_thisPIP);
+    void store_QPIRI(String _value, uint32_t _now);
+    void store_QPIGS(String _value, uint32_t _now);
+    void clear_QPIGS (pipVals_t &_thisPIP);
+    void clear_QPIRI();
     void smoothing_QPIGS();
     bool rap();
     String addCRC(String _cmd);
