@@ -77,7 +77,7 @@ void SUPPORT_FUNCTIONS::logMsg(int _level, String _msg)
 * Receives date/time in pieces abd converts to Unix timestamp (1970)*
 *
 *-------------------------------------------------------------------------------------------------*/
-uint32_t SUPPORT_FUNCTIONS::convertToUnixtime(uint8_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _min, uint8_t _sec) 
+uint32_t SUPPORT_FUNCTIONS::convertToUnixtime(uint16_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _min, uint8_t _sec) 
 {
   // convert a date and time into unix time, offset 1970
   _time_elements.Second = _sec;
