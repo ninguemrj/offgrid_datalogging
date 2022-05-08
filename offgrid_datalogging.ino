@@ -1,4 +1,10 @@
-#define VERBOSE_MODE 0     // 0 = none  / 1 = Debug
+#include "config.h"
+
+/////////////////////////////////
+// URGENT
+// DATE for SD filename not updated
+// SD writing on loop without time delay
+/////////////////////////////////////
 /*
   offgrid_datalogging
   -------------------
@@ -41,7 +47,9 @@ TO DO LIST:
   C)   start to use SD Card for data logging (define data structure, not uploaded info and etc.)
   D)   start to use wifi (when available) for data logging in the cloud (checking in the SD CARD for non uploaded contents)
   E)   Add 16 temperature sensors with ADS1115 ADC (15/16bits)
-
+  F)   Implement a logic to control how often the averaged data is written in SD/Cloud 
+       At this moment it is storing each smoothed read (unix time diff)
+  G)   Create (on PVINTERTER.H) accumulated information (watt/h, amp/h)
 */
 
 
@@ -50,22 +58,56 @@ TO DO LIST:
 ///// Includes ///////////////////////////////////////////////////////////////////////////////////
 
 
-#include "Arduino.h"
-#include "SerialDebug.h" //https://github.com/JoaoLopesF/SerialDebug
-#include "Inverter.h"
+#ifndef ARDUINO_H
+  #include <Arduino.h>
+#endif 
+
+#ifndef PVINVERTER_H
+  #include "PVinverter.h"
+#endif
+
 #include <Wire.h>
-#include "RTClib.h"
+#include "SQLITE_inverter.h"
+#include "webserver_inverter.h"
+
+
+/// Time //////////////////////////////////
+#ifndef TIME_H
+  #include "time.h"
+#endif
+
+#include "sntp.h"
+
+const char* ntpServer1 = "pool.ntp.org";
+const char* ntpServer2 = "time.nist.gov";
+const long  gmtOffset_sec = -3*3600;
+const int   daylightOffset_sec = 0*3600;
+time_t now;
+struct tm timeinfo;
 
 
 
 ////// Variable ///////////////////////////////////////////////////////////////////////////////////
 
-/// RTC
-RTC_DS1307 rtc;
 
-//***** SERIAL3 on MEGA for Solar Inverter communication ***************************************************
+//******* WIFI ************************************************
+    String ssid = "Ninguem_house";
+    String password = "a2a3a1982a";
+
+
+//***** SERIAL3 on MEGA for Solar Inverter communication *****************************
+//***** SERIAL2 on ESP32 for Solar Inverter communication ****************************
 // Change this argument to the SERIAL actualy used to communicates with the inverter
-static INVERTER inv(Serial3);
+PV_INVERTER inv(Serial2);
+
+//***** Prepare SQLITE variable ***************************************************
+SQLITE_INVERTER SQL_inv;
+
+//***** Prepare WEBSERVER variable ***************************************************
+WEBSERVER_INVERTER WEB_inv;
+
+//***** var to control when a new smoothed QPIGS reading was taken *******************
+uint32_t previous_reading_unixtime = 0;
 
 
 /// Benchmark
@@ -73,69 +115,82 @@ uint32_t oldtime = 0;
 
 
 
+String _errorDateTime()
+{
+  return "-- " + String(timeinfo.tm_year +1900) + "/" + String(timeinfo.tm_mon + 1) + "/" + String(timeinfo.tm_mday) + " - " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec) + " | ";
+}
+
+
 ////// Setup ///////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  Serial.begin(500000); // Can change it to 115200, if you want use debugIsr* macros
+  Serial.begin(115200); // Can change it to 115200, if you want use debugIsr* macros
   delay(500); // Wait a time
   Serial.println(); // To not stay in end of dirty chars in boot
-
   Serial.println("**** Setup: initializing ...");
 
-//***** RTC ***************************************************
-  if (! rtc.begin()) {
-    Serial.println("--ERROR: Couldn't find RTC shield.");
-  }
 
-  if (! rtc.isrunning()) {
-    Serial.println("--WARNING: RTC is NOT running, check RTC battery!");
-
-    //Set compiling data and time if not set
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
-
-// Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
-  inv.begin(2400, 'B', VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS 
+//***** PVINVERTER ***************************************************
+  // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
+  inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
 
 
 
-//***** WIFI Connection ***************************************************
-// Pending ...
-// Present IP Addr
-// SSID
-// Connection status
-    
-    
-//***** SD Card  ***************************************************
-// Pending ...
-// Check if SD card is present 
-// Check if SD card is writable
+
+//***** Prepare NTC Time client **************************************
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+
+//***** Prepare SQLITE_inverter to store data on SD CARD **********
+  SQL_inv.begin(VERBOSE_MODE);
+
+//***** Prepare WEBSERVER for LIVE data ******************************
+// Default web server port = 80
+  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_QPIGS);
 
 
 //***** SETUP END
   Serial.println("**** Setup: initialized.");
 }
 
-
-
 ////// Loop /////////////////////////////////////////////////////////////
 
 void loop()
 {
   int returned_code = 0;
-  DateTime now = rtc.now();
+  // ----------- UPDATE Current DATE/TIME on Loop ---------------------------------
+  if (!getLocalTime(&timeinfo)) Serial.println(_errorDateTime() + "-- ERROR: TIME: Failed to obtain time.");
 
+  //ESP32 RTC time 
+  //TODO: Syncronize them each hour
+  time(&now);
   
-  //// request QPIGS and QPIRI data from inverter  /////////////////////////////////////////////
-  returned_code = inv.ask_inverter_data(now.unixtime());
+  //--------- Request QPIGS and QPIRI data from inverter  --------------
+  returned_code = inv.ask_data(now, true);
   if (returned_code != 0)                 
   {
-    Serial.println("-- ERROR: INVERTER: Error executing 'ask_inverter_data' function! Erro code:" + String(returned_code));        
+    Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'ask_data' function! Erro code:" + String(returned_code));        
   }
 
-  // print pipVals on serial port only on VERBOSE mode
-  if(inv.pipVals.acOutput != 0)
-    inv.inverter_console_data();                     
+  // --- check for contents on QPIGS_values structure
+  if((inv.QPIGS_average.acOutput != 0) && (previous_reading_unixtime != inv.QPIGS_average._unixtime))
+  {
+
+    // Prints on console in VERBOSE mode
+    if (VERBOSE_MODE == 1) Serial.println(inv.debug_QPIGS(inv.QPIGS_average)); 
+
+    // Store data on SD
+    // "_stored_online" fized as "true", as it was not implemented yet
+    if (SQL_inv.sd_StoreQPIGS(inv.QPIGS_average, true) != 0)
+    {
+      Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
+    }
+
+    // Updates latest 40 QPIGS array from SQLite
+    SQL_inv.ask_latest_SQL_QPIGS();
+
+    // Updated "previous_reading_unixtime" to avoid storing the same data twice
+    previous_reading_unixtime = inv.QPIGS_average._unixtime;
+  }                  
 
   ////////////////////////////////////////////////////////////////////////////////////
   // AUTOMATION SETTINGS:
@@ -144,9 +199,10 @@ void loop()
   // inverter settings considering inverter class rules
   // Uncomment it to use it
   ////////////////////////////////////////////////////////////////////////////////////
-//  if (inv.handle_inverter_automation(19, 23) != 0) 
-//    Serial.println("-- ERROR: INVERTER: Automation Error! Error code: " + String(returned_code));        
-    
+  if (inv.handle_automation(timeinfo.tm_hour, timeinfo.tm_min, true) != 0) 
+    Serial.println(_errorDateTime() + "-- ERROR: INVERTER: Automation Error! Error code: " + String(returned_code));        
+
+  inv.ESPyield();
   
 }
 

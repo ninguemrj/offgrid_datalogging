@@ -1,0 +1,25 @@
+#######################################
+# Syntax Coloring Map For PVinverter
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+PV_INVERTER	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+begin	KEYWORD2
+inverter_console_data	KEYWORD2
+handle_inverter_automation	KEYWORD2
+ask_inverter_data	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+© 2022 GitHub, Inc.
+Terms
+Privacy
+Security

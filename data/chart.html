@@ -1,0 +1,184 @@
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <title>Snippet - GoSNippets</title>
+        <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css' rel='stylesheet'>
+        <link href='' rel='stylesheet'>
+        <style>.panel.with-nav-tabs .panel-heading {
+                    padding: 5px 5px 0 5px;
+                    }
+
+                    .panel.with-nav-tabs .nav-tabs {
+                    border-bottom: none;
+                    }
+
+                    .panel.with-nav-tabs .nav-justified {
+                    margin-bottom: -1px;
+                    }
+
+                    /********************************************************************/
+                    /*** PANEL PRIMARY ***/
+                    .with-nav-tabs.panel-primary .nav-tabs>li>a,
+                    .with-nav-tabs.panel-primary .nav-tabs>li>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>li>a:focus {
+                        color: #fff;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>.open>a,
+                    .with-nav-tabs.panel-primary .nav-tabs>.open>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>.open>a:focus,
+                    .with-nav-tabs.panel-primary .nav-tabs>li>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>li>a:focus {
+                        color: #fff;
+                        background-color: #3071a9;
+                        border-color: transparent;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>li.active>a,
+                    .with-nav-tabs.panel-primary .nav-tabs>li.active>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>li.active>a:focus {
+                        color: #428bca;
+                        background-color: #fff;
+                        border-color: #428bca;
+                        border-bottom-color: transparent;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu {
+                        background-color: #428bca;
+                        border-color: #3071a9;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>li>a {
+                        color: #fff;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>li>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>li>a:focus {
+                        background-color: #3071a9;
+                    }
+                    
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>.active>a,
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>.active>a:hover,
+                    .with-nav-tabs.panel-primary .nav-tabs>li.dropdown .dropdown-menu>.active>a:focus {
+                        background-color: #4a9fe9;
+                    }
+        </style>        
+        <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+        <script type='text/javascript' src='https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js'></script>
+        <script type='text/javascript' src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js'></script>
+
+
+        <script src="https://code.highcharts.com/stock/highstock.js"></script>
+        <script src="https://code.highcharts.com/modules/timeline.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+        <script>
+
+        let chart; // global
+        /**
+        * Request data from the server, add it to the graph and set a timeout to request again
+        */
+         //console.log("TESTE"); 
+         async function requestData() {
+            const result = await fetch('http://192.168.0.122/PVPower.json');
+          if (result.ok) {
+              const data = await result.json();
+              const series = chart.series[0];
+              shift = series.data.length > 79;
+              if(!shift)
+              {
+                  for (let i=0; i < 40; i++)
+                    {
+                        // chart series with less than 40 points, fill all points at once
+                        console.log(data[i][0]);
+                        chart.series[0].addPoint([data[i][0], data[i][1]], true, shift);
+                    }
+              }
+              else
+              {
+                // chart series with 40 points, add a new point shiffiting on off  
+                chart.series[0].addPoint([data[0][0], data[0][1]], true, shift);
+                console.log(data[0][0]);
+              }
+              //call it again after one second
+              setTimeout(requestData, 5000);
+          }
+        }
+
+
+        // Create the chart
+        window.addEventListener('load', function () {
+        chart = new Highcharts.Chart({
+            chart: {
+                renderTo: 'container',
+                events: {
+                    load: requestData
+                }
+            },
+            title: {
+                text: 'Generated Solar Power'
+            },
+            plotOptions: {
+                line: { animation: false,
+                dataLabels: { enabled: true }
+                },
+                series: { color: '#059e8a', lineWidth: 3 } 
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: { second: '%H:%M:%S' },
+                //tickPixelInterval: 150,
+                maxZoom: 20 * 1000
+            },
+            yAxis: {
+                minPadding: 0.2,
+                maxPadding: 0.2,
+                title: {
+                    text: 'Watts',
+                    margin: 80
+                }
+            },
+            series: [{
+            name: 'Generated Power',
+            data: []
+            }]
+        });
+        });
+
+        </script>
+
+    </Head>
+    <body>
+        <div class="col-md-6">
+            <div class="panel with-nav-tabs panel-primary">
+                <div class="panel-heading">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a href="#tab1primary" data-toggle="tab">Primary 1</a></li>
+                        <li><a href="#tab2primary" data-toggle="tab">Primary 2</a></li>
+                        <li><a href="#tab3primary" data-toggle="tab">Primary 3</a></li>
+                        <li class="dropdown">
+                            <a href="#" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#tab4primary" data-toggle="tab">Primary 4</a></li>
+                                <li><a href="#tab5primary" data-toggle="tab">Primary 5</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="panel-body">
+                    <div class="tab-content">
+                        <div class="tab-pane fade in active" id="tab1primary"><div id="container" style="height: 400px; min-width: 310px"></div></div>
+                        <div class="tab-pane fade" id="tab2primary">Primary 2</div>
+                        <div class="tab-pane fade" id="tab3primary">Primary 3</div>
+                        <div class="tab-pane fade" id="tab4primary">Primary 4</div>
+                        <div class="tab-pane fade" id="tab5primary">Primary 5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        
+    </body>
+</html>
