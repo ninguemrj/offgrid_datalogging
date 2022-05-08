@@ -70,5 +70,21 @@ void SUPPORT_FUNCTIONS::logMsg(int _level, String _msg)
     }
     break;
   }
+}
 
+
+/*--- convertToUnixtime----------------------------------------------------------------------------
+* Receives date/time in pieces abd converts to Unix timestamp (1970)*
+*
+*-------------------------------------------------------------------------------------------------*/
+uint32_t SUPPORT_FUNCTIONS::convertToUnixtime(uint8_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _min, uint8_t _sec) 
+{
+  // convert a date and time into unix time, offset 1970
+  this->_time_elements.Second = _sec;
+  this->_time_elements.Minute = _min;
+  this->_time_elements.Hour = _hour;
+  this->_time_elements.Day = _day;
+  this->_time_elements.Month = _month - 1;      // months start from 0, so deduct 1
+  this->_time_elements.Year = _year - 1970; // years since 1970, so deduct 1970
+  return (uint32_t)makeTime(this->_time_elements);
 }

@@ -27,6 +27,7 @@
 
 #ifndef TIME_H
   #include "time.h"
+  #include "TimeLib.h"
 #endif
 
 #include "config.h"
@@ -35,7 +36,9 @@ class SUPPORT_FUNCTIONS
 {
   public:
     static void logMsg(int _level, String _msg);  // 0 = INFO / 1 = Warning / 2 = ERROR / 3 = Debug / 4 = Benchmark
-
+    static uint32_t convertToUnixtime(uint8_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _min, uint8_t _sec);
+    static tmElements_t _time_elements;  // time elements structure
+    //time_t _unixtime; // a timestamp
 
 };
 
