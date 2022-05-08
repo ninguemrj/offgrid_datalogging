@@ -82,7 +82,7 @@ const char* ntpServer1 = "pool.ntp.org";
 const char* ntpServer2 = "time.nist.gov";
 const long  gmtOffset_sec = -3*3600;
 const int   daylightOffset_sec = 0*3600;
-time_t now;
+time_t _now;
 struct tm timeinfo;
 
 
@@ -169,10 +169,10 @@ void loop()
 
   //ESP32 RTC time 
   //TODO: Syncronize them each hour
-  time(&now);
+  time(&_now);
   
   //--------- Request QPIGS and QPIRI data from inverter  --------------
-  returned_code = inv.ask_data(now, true);
+  returned_code = inv.ask_data(_now, true);
   if (returned_code != 0)                 
   {
     Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'ask_data' function! Erro code:" + String(returned_code));        
