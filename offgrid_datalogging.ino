@@ -138,14 +138,21 @@ void setup() {
 
 
 //***** Prepare NTC Time client **************************************
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_setservername(0, ntpServer1);
+  sntp_init();
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
 
 //***** Prepare SQLITE_inverter to store data on SD CARD **********
-  SQL_inv.begin(VERBOSE_MODE);
+  SQL_inv.begin();
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_QPIGS);
+  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_daily_QPIGS);
+
+
+// TESTING Updates latest 288 QPIGS array from SQLite Averaged Daily
+SQL_inv.ask_latest_SQL_QPIGS();
 
 
 //***** SETUP END
@@ -185,8 +192,6 @@ void loop()
       Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
     }
 
-    // Updates latest 40 QPIGS array from SQLite
-    SQL_inv.ask_latest_SQL_QPIGS();
 
     // Updated "previous_reading_unixtime" to avoid storing the same data twice
     previous_reading_unixtime = inv.QPIGS_average._unixtime;
