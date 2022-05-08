@@ -13,6 +13,10 @@
   #include "PVinverter.h"
 #endif
 
+#ifndef SUPPORT_FUNCTIONS_H
+  #include "support_functions.h"
+#endif
+
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
@@ -27,7 +31,7 @@ class WEBSERVER_INVERTER
 
     WEBSERVER_INVERTER() {};
 
-    void begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40]);
+    void begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_daily_QPIGS)[288]);
 
 
   private:

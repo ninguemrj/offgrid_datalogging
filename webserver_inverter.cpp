@@ -4,7 +4,7 @@
 extern String _errorDateTime();
 
 
-void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40])
+void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_daily_QPIGS)[288])
 {
       //--- Initialize ESP SPIFFS (flash filesystem) to recover the index.html file --------
       if(!SPIFFS.begin()){
@@ -94,15 +94,15 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
 
   //--- PV 40 readings of acActivePower from SQL and parse as Json  -----------------
 
-  _server.on("/PVPower.json", HTTP_GET, [_SQL_QPIGS](AsyncWebServerRequest *request)
+  _server.on("/PVPower.json", HTTP_GET, [_SQL_daily_QPIGS](AsyncWebServerRequest *request)
   {
     uint32_t teste = millis();
-    StaticJsonDocument<2600> doc;
+    StaticJsonDocument<17000> doc;
     JsonArray arr1 = doc.createNestedArray();
-    for (int i=0; i<40; i++)
+    for (int i=0; i<288; i++)
     {
-      arr1[0] = (uint64_t)(*_SQL_QPIGS)[i]._unixtime*1000;
-      arr1[1] = (*_SQL_QPIGS)[i].acActivePower;
+      arr1[0] = (uint64_t)(*_SQL_daily_QPIGS)[i]._unixtime*1000;
+      arr1[1] = (*_SQL_daily_QPIGS)[i].acActivePower;
       doc.add(arr1);
       
       #if defined (ESP8266) || (defined ESP32)
