@@ -39,6 +39,10 @@
   #include "time.h"
 #endif
 
+#ifndef SUPPORT_FUNCTIONS_H
+  #include "support_functions.h"
+#endif
+
 #include <sqlite3.h>
 //#include <SPI.h>
 #include <FS.h>
@@ -60,16 +64,14 @@ class SQLITE_INVERTER
            return;
     }
   
-  void begin(uint8_t _verbose_begin);
+  void begin();
   void ask_latest_SQL_QPIGS();
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);
-  PV_INVERTER::pipVals_t SQL_QPIGS[40];
+  PV_INVERTER::pipVals_t SQL_daily_QPIGS[288];
 
   
   private:
   
-    uint8_t _VERBOSE_MODE;
-
     //------- SQLite3 2.3.0 --------------
     const char* data = "Callback function called";
     char *zErrMsg = 0;   
@@ -85,7 +87,8 @@ class SQLITE_INVERTER
     struct tm  ts;
 
     //------- Private Functions ----------------
-   
+
+    void clear_SqlQPIGS();
     uint8_t card_inserted();
   
     // --- SD Sample functions from SD_test.ino example ----
