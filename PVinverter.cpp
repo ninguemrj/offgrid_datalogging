@@ -738,7 +738,7 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
   
           //--- For benchmarking the averaged Solar PV_INVERTER communication ---------------------------      
           // 4 = benchmark msg
-          SUPPORT_FUNCTIONS::logMsg(4, "Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
+          SUPPORT_FUNCTIONS::logMsg(4, "PV_INVERTER: ask_data: Time to read, acummulate and average QPIGS info: " + String((millis() - _average_oldtime)));
           
           // 3 = debug msg
           SUPPORT_FUNCTIONS::logMsg(3, this->debug_QPIRI()); 
