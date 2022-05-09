@@ -23,6 +23,8 @@
 #ifndef SQLITE_INVERTER_H
 #define SQLITE_INVERTER_H
 
+#include "config.h"
+
 #ifndef ARDUINO_H
   #include <Arduino.h>
 #endif 
@@ -47,7 +49,7 @@
 //#include <SPI.h>
 #include <FS.h>
 #include "SD.h"
-#include "config.h"
+
 
 
 class SQLITE_INVERTER
@@ -67,7 +69,7 @@ class SQLITE_INVERTER
   void begin();
   void ask_latest_SQL_QPIGS();
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);
-  PV_INVERTER::pipVals_t SQL_daily_QPIGS[288];
+  PV_INVERTER::pipVals_t SQL_daily_QPIGS[SQL_ARRAY_SIZE+1];
 
   
   private:
