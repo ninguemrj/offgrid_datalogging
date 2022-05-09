@@ -35,34 +35,33 @@ void SQLITE_INVERTER::begin()
 void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
 {
 /////// SAMPLE CODE FOR SQLite3 SELECT STATEMENT /////////////////
-    uint32_t teste2 = millis();
-
-
-    uint32_t _begin_SearchDateTime = SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 0, 0, 0); 
-    uint32_t _end_SearchDateTime   = SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 23, 59, 59); 
-    
-    uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
-    uint32_t _count_time_split = 0;         //from 0 to 287 (for time split will be from 1 to 288)
-    uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
-        
     // Clears previous Select results from RES pointer
     sqlite3_finalize(res);
 
     //Clears previous QPIGS info stored in SQL_daily_QPIGS
     this->clear_SqlQPIGS();
+ 
+     
+     uint32_t teste2 = millis();
+
+    uint32_t _begin_SearchDateTime = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 0, 0, 0); 
+    uint32_t _end_SearchDateTime   = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 23, 59, 59); 
+    
+    uint32_t _time_split = 5 * 60 ;         // 15 minutes * 60 seconds in order to average all reads withing each 5 minutes
+    uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
+    uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
 
     String _SQL = String("Select * from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
+    
     // 3 = DEBUG msg
     SUPPORT_FUNCTIONS::logMsg(3, _SQL);
     
-    rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1500000, &res, &tail);
+    rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
     uint32_t _rows = 0;
-
 
     while (sqlite3_step(res) == SQLITE_ROW) 
     {
         yield();
-
         // Is the current position read time stamp higher than the limit of the current ´_count_time_split´?
         // -> YES = Average previous accumulated readings by dividing with '_count_within_split_reads' AND 1) increment ´_count_time_split´ AND 2) zero '_count_within_split_reads';
         // -> NO = Leave it to continue accumulating readings and counting '_count_within_split_reads'
@@ -97,8 +96,7 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         
           // ENDO OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
         }
-        
-        
+         
         this->SQL_daily_QPIGS[_count_time_split]._unixtime                 = sqlite3_column_int(res, 0); // getting only the latest 5min reading
         this->SQL_daily_QPIGS[_count_time_split].gridVoltage              += sqlite3_column_int(res, 1);
         this->SQL_daily_QPIGS[_count_time_split].gridFrequency            += sqlite3_column_int(res, 2);
@@ -140,16 +138,20 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         // Prepare the row counter for the next row
         _rows ++;
     }
-    Serial.println("-----------");
-    Serial.println("ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
+    Serial.println("************************************************************************************************************************");
+    // 3 = DEBUG msg
+    SUPPORT_FUNCTIONS::logMsg(4, "ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
 
+    // 3 = DEBUG msg
+    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
 
 }
 
 
 void SQLITE_INVERTER::clear_SqlQPIGS()
 {
-  for (int _rows = 0; _rows < 288; _rows++)
+  // 3 = DEBUG msg
+  for (int _rows = 0; _rows < SQL_ARRAY_SIZE; _rows++)
   {
     yield();
     this->SQL_daily_QPIGS[_rows]._unixtime                = 0;
