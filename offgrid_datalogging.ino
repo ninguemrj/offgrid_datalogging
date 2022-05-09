@@ -124,15 +124,16 @@ String _errorDateTime()
 ////// Setup ///////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  Serial.begin(115200); // Can change it to 115200, if you want use debugIsr* macros
+  Serial.begin(115200); 
   delay(500); // Wait a time
   Serial.println(); // To not stay in end of dirty chars in boot
   Serial.println("**** Setup: initializing ...");
-
+    SUPPORT_FUNCTIONS::logMsg(3, "getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
 
 //***** PVINVERTER ***************************************************
   // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
   inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
+  Serial.println("**** PV Inverter: initialized ...");
 
 
 
@@ -141,17 +142,23 @@ void setup() {
   sntp_setoperatingmode(SNTP_OPMODE_POLL);
   sntp_setservername(0, ntpServer1);
   sntp_init();
+  Serial.println("**** SNTP: initialized ...");
+
+  
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+  Serial.println("**** NTP: initialized ...");
 
 //***** Prepare SQLITE_inverter to store data on SD CARD **********
   SQL_inv.begin();
+  Serial.println("**** SQL Inverter: initialized ...");
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
   WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_daily_QPIGS);
+  Serial.println("**** WebServer Inverter: initialized ...");
 
 
-// TESTING Updates latest 288 QPIGS array from SQLite Averaged Daily
+// TESTING Updates latest SQL_ARRAY_SIZE QPIGS array from SQLite Averaged Daily
 SQL_inv.ask_latest_SQL_QPIGS();
 
 
