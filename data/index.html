@@ -358,10 +358,7 @@
             if (result.ok) jdata_battery = await result.json();
             chart = new Highcharts.Chart({
                 chart: {
-                    renderTo: 'chart-BatVoltage_DAY',
-                    events: {
-                        load: requestData
-                    }
+                    renderTo: 'chart-BatVoltage_DAY'
                 },
                 title: {
                     text: 'Battery Volts by day'
