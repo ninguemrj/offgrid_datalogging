@@ -154,7 +154,7 @@ void setup() {
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_daily_QPIGS);
+  WEB_inv.begin(ssid, password, &inv, &SQL_inv);
   Serial.println("**** WebServer Inverter: initialized ...");
 
 
