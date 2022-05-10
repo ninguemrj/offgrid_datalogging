@@ -121,8 +121,8 @@
             <div class="panel with-nav-tabs panel-primary">
                 <div class="panel-heading">
                     <ul class="nav nav-tabs">
-                        <li class="active"><a href="#tab1primary" data-toggle="tab">LIVE Reading</a></li>
-                        <li><a href="#tab2primary" data-toggle="tab">Primary 2</a></li>
+                        <li class="active"><a href="#tab1primary" data-toggle="tab">LIVE Readings</a></li>
+                        <li><a href="#tab2primary" data-toggle="tab">Daily Readings</a></li>
                         <li><a href="#tab3primary" data-toggle="tab">Primary 3</a></li>
                         <li class="dropdown">
                             <a href="#" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
@@ -142,7 +142,9 @@
                             <div id="chart-BatCharge" class="container"></div>
                             <div id="chart-BatDischarge" class="container"></div>
                         </div>
-                        <div class="tab-pane fade" id="tab2primary">Primary 2</div>
+                        <div class="tab-pane fade" id="tab2primary">
+                            <div id="chart-BatVoltage_DAY" class="container"></div>
+                        </div>
                         <div class="tab-pane fade" id="tab3primary">Primary 3</div>
                         <div class="tab-pane fade" id="tab4primary">Primary 4</div>
                         <div class="tab-pane fade" id="tab5primary">Primary 5</div>
@@ -342,6 +344,62 @@
         xhttp.open("GET", "/BatVoltage", true);
         xhttp.send();
         }, 2000 ) ;
+
+
+        /////////////////////////////////////////////////////////////////////
+        ///// chart-BatVoltage /////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////
+
+        let chart; // global
+
+        // Create the chart
+        window.addEventListener('load', async function () {
+            const result = await fetch('http://192.168.0.122/sqlDaily.json');
+            if (result.ok) jdata_battery = await result.json();
+            chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: 'chart-BatVoltage_DAY',
+                    events: {
+                        load: requestData
+                    }
+                },
+                title: {
+                    text: 'Battery Volts by day'
+                },
+                plotOptions: {
+                    line: 
+                    { 
+                        animation: false,
+                        dataLabels: 
+                        { 
+                            enabled: false,
+                            style: 
+                            {
+                                fontWeight: 'normal',
+                            } 
+                        }
+                    },
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: 
+                {
+                    type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: 
+                {
+                    title: {
+                        text: 'Volts',
+                        margin: 10
+                    }
+                },
+                series: [{
+                    type: 'line',
+                    name: 'Battery Volts',
+                    data: jdata_battery
+                }]
+            });
+        });
 
         /////////////////////////////////////////////////////////////////////
         ///// chart-BatCharge /////////////////////////////////////////////
