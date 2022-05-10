@@ -4,7 +4,7 @@
 extern String _errorDateTime();
 
 
-void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_daily_QPIGS)[SQL_ARRAY_SIZE+1])
+void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV)
 {
       //--- Initialize ESP SPIFFS (flash filesystem) to recover the index.html file --------
       if(!SPIFFS.begin()){
@@ -94,24 +94,31 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
 
   //--- PV 40 readings of acActivePower from SQL and parse as Json  -----------------
 
-  _server.on("/sqlDaily.json", HTTP_GET, [_SQL_daily_QPIGS](AsyncWebServerRequest *request)
+  _server.on("/sqlDaily.json", HTTP_GET, [_SQL_INV](AsyncWebServerRequest *request)
   {
     uint32_t teste = millis();
-    StaticJsonDocument<19000> doc;
-    JsonArray arr1 = doc.createNestedArray();
+
+    //--- BEGIN: Prepare JSON string -------------------------------
+    String response = "[";
+    bool _first = true;
     for (int i=0; i<SQL_ARRAY_SIZE; i++)
     {
-      arr1[0] = (uint64_t)(*_SQL_daily_QPIGS)[i]._unixtime*1000;
-      arr1[1] = (*_SQL_daily_QPIGS)[i].acActivePower;
-      doc.add(arr1);
-      
-      #if defined (ESP8266) || (defined ESP32)
-        yield();
-      #endif 
-    } 
+      if (_first)
+      {
+        response += String("[");
+        _first = false;
+      }
+      else
+      {
+        response += String(",[");
+      }
+      response += int64String((uint64_t)_SQL_INV->SQL_daily_QPIGS[i]._unixtime*1000)+String(",")+String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00))+String("]");
+      yield();
+    }
+    response += String("]");    
+    //--- END: Prepare JSON string -------------------------------
+    
     Serial.println("time json: " + String(millis()-teste));
-    String response;
-    serializeJson(doc, response);
     request->send(200, "application/json", response );
   });
 
