@@ -92,6 +92,7 @@ class SQLITE_INVERTER
 
     void clear_SqlQPIGS();
     uint8_t card_inserted();
+    void _average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads, uint32_t _rounded_unix_time);
   
     // --- SD Sample functions from SD_test.ino example ----
     // --- (https://github.com/espressif/arduino-esp32/tree/master/libraries/SD/examples/SD_Test)

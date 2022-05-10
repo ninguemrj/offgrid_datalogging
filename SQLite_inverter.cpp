@@ -23,7 +23,6 @@
 #include "SQLite_inverter.h"
 
 ////////// Date and time function for error mesages //////////
-extern String _errorDateTime();
 
 
 void SQLITE_INVERTER::begin()
@@ -31,6 +30,33 @@ void SQLITE_INVERTER::begin()
 
 }
 
+
+
+void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads, uint32_t _rounded_unix_time)
+{
+  // Uses rounded minute for average unix time (00 seconds)
+  this->SQL_daily_QPIGS[_count_time_split]._unixtime   =  _rounded_unix_time;
+
+  // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+  this->SQL_daily_QPIGS[_count_time_split].gridVoltage              = this->SQL_daily_QPIGS[_count_time_split].gridVoltage              / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].gridFrequency            = this->SQL_daily_QPIGS[_count_time_split].gridFrequency            / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].acOutput                 = this->SQL_daily_QPIGS[_count_time_split].acOutput                 / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].acFrequency              = this->SQL_daily_QPIGS[_count_time_split].acFrequency              / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].acApparentPower          = this->SQL_daily_QPIGS[_count_time_split].acApparentPower          / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].acActivePower            = this->SQL_daily_QPIGS[_count_time_split].acActivePower            / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].loadPercent              = this->SQL_daily_QPIGS[_count_time_split].loadPercent              / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].busVoltage               = this->SQL_daily_QPIGS[_count_time_split].busVoltage               / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           = this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     = this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].batteryCharge            = this->SQL_daily_QPIGS[_count_time_split].batteryCharge            / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      = this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].PVCurrent                = this->SQL_daily_QPIGS[_count_time_split].PVCurrent                / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].PVVoltage                = this->SQL_daily_QPIGS[_count_time_split].PVVoltage                / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].PVPower                  = this->SQL_daily_QPIGS[_count_time_split].PVPower                  / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].batterySCC               = this->SQL_daily_QPIGS[_count_time_split].batterySCC               / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  = this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  / _count_within_split_reads;
+  this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           = this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           / _count_within_split_reads;
+}
 
 void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
 {
@@ -44,10 +70,10 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
      
      uint32_t teste2 = millis();
 
-    uint32_t _begin_SearchDateTime = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 0, 0, 0); 
-    uint32_t _end_SearchDateTime   = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 05, 06, 23, 59, 59); 
+    uint32_t _begin_SearchDateTime = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 0, 0, 0); 
+    uint32_t _end_SearchDateTime   = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 23, 59, 59); 
     
-    uint32_t _time_split = 5 * 60 ;         // 15 minutes * 60 seconds in order to average all reads withing each 5 minutes
+    uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
     uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
     uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
 
@@ -66,28 +92,15 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         // -> YES = Average previous accumulated readings by dividing with '_count_within_split_reads' AND 1) increment ´_count_time_split´ AND 2) zero '_count_within_split_reads';
         // -> NO = Leave it to continue accumulating readings and counting '_count_within_split_reads'
         
+        SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
+
+        
         if (sqlite3_column_int(res, 0) >= (_begin_SearchDateTime + (_time_split * (_count_time_split + 1))))
         {
-          // BEING OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
-          this->SQL_daily_QPIGS[_count_time_split].gridVoltage              = this->SQL_daily_QPIGS[_count_time_split].gridVoltage              / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].gridFrequency            = this->SQL_daily_QPIGS[_count_time_split].gridFrequency            / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].acOutput                 = this->SQL_daily_QPIGS[_count_time_split].acOutput                 / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].acFrequency              = this->SQL_daily_QPIGS[_count_time_split].acFrequency              / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].acApparentPower          = this->SQL_daily_QPIGS[_count_time_split].acApparentPower          / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].acActivePower            = this->SQL_daily_QPIGS[_count_time_split].acActivePower            / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].loadPercent              = this->SQL_daily_QPIGS[_count_time_split].loadPercent              / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].busVoltage               = this->SQL_daily_QPIGS[_count_time_split].busVoltage               / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           = this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     = this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].batteryCharge            = this->SQL_daily_QPIGS[_count_time_split].batteryCharge            / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      = this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].PVCurrent                = this->SQL_daily_QPIGS[_count_time_split].PVCurrent                / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].PVVoltage                = this->SQL_daily_QPIGS[_count_time_split].PVVoltage                / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].PVPower                  = this->SQL_daily_QPIGS[_count_time_split].PVPower                  / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].batterySCC               = this->SQL_daily_QPIGS[_count_time_split].batterySCC               / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  = this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  / _count_within_split_reads;
-          this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           = this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           / _count_within_split_reads;
+          // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+          this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads, _begin_SearchDateTime + (_time_split * (_count_time_split + 1))); // Latest argument = rounded unix time
 
+          
           // Zeros the '_count_within_split_reads' for calculate next averaging
           _count_within_split_reads = 0;
 
@@ -138,12 +151,17 @@ void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
         // Prepare the row counter for the next row
         _rows ++;
     }
+    // LATEST POSITION: Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+    this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads, _begin_SearchDateTime + (_time_split * (_count_time_split + 1))); // Latest argument = rounded unix time
+    
+    //Serial.println("************************************************************************************************************************");
+    //SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
     Serial.println("************************************************************************************************************************");
     // 3 = DEBUG msg
     SUPPORT_FUNCTIONS::logMsg(4, "ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
 
     // 3 = DEBUG msg
-    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
+//    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
 
 }
 
@@ -231,22 +249,22 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
       String(_thisPIP.DevStat_dustProof)        +
       ");";
       
-    if (VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- - VERBOSE: SQLITEr: SQL Cmd line: |" + _QPIGS_line + "|END.");
+    if (VERBOSE_MODE == 1) Serial.println("-- - VERBOSE: SQLITEr: SQL Cmd line: |" + _QPIGS_line + "|END.");
     
 
     // Run SQL Insert statement 
     rc = db_exec(db1, _QPIGS_line.c_str());
     if (rc != SQLITE_OK) 
     {
-       Serial.println(_errorDateTime() +"--- ERROR: SQLITE: INSERT SQL Cmd error code: " + String(rc));
+       Serial.println("--- ERROR: SQLITE: INSERT SQL Cmd error code: " + String(rc));
        sqlite3_close(db1);
        
        return 1;
     }
     
-    if (VERBOSE_MODE == 2) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
-    if (VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");
-    if (VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--- VERBOSE: SQLITE: MEM HighWater: |" + String((long)sqlite3_memory_highwater(1)) + "|END.");
+    if (VERBOSE_MODE == 2) Serial.println("--- VERBOSE: SQLITE: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
+    if (VERBOSE_MODE == 1) Serial.println("--- VERBOSE: SQLITE: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");
+    if (VERBOSE_MODE == 1) Serial.println("--- VERBOSE: SQLITE: MEM HighWater: |" + String((long)sqlite3_memory_highwater(1)) + "|END.");
 
     //sqlite3_close(db1);
 
@@ -297,7 +315,7 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
   //------------   Check if there is SD and available size ----------------------
   if (card_inserted() != 0) 
   {
-    Serial.println(_errorDateTime() + "-- ERROR: SQLITE: QPIGS not stored in SD Card! -----");
+    Serial.println("-- ERROR: SQLITE: QPIGS not stored in SD Card! -----");
     return 1;
   }
 
@@ -345,8 +363,8 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
 
     if (VERBOSE_MODE == 1)
     {
-      Serial.println(_errorDateTime() + "-- VERBOSE: SQLITE: File name: " + _file);
-      Serial.println(_errorDateTime() + "-- VERBOSE: SQLITE: QPIGS String |" + _QPIGS_line + "|");
+      Serial.println("-- VERBOSE: SQLITE: File name: " + _file);
+      Serial.println("-- VERBOSE: SQLITE: QPIGS String |" + _QPIGS_line + "|");
     }
 
   appendFile(SD, _file.c_str(), _QPIGS_line.c_str());
@@ -363,7 +381,7 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
 //// START SQLite3 //////////////////////
 int SQLITE_INVERTER::callback(void *data, int argc, char **argv, char **azColName){
    int i;
-   Serial.println(_errorDateTime() +"-- VERBOSE: SQLITE: SQLite callback: " + String((const char*)data));
+   Serial.println("-- VERBOSE: SQLITE: SQLite callback: " + String((const char*)data));
 /*   for (i = 0; i<argc; i++){
        Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
    }
@@ -375,10 +393,10 @@ int SQLITE_INVERTER::callback(void *data, int argc, char **argv, char **azColNam
 int SQLITE_INVERTER::openDb(const char *filename, sqlite3 **db) {
    int _result = sqlite3_open(filename, db);
    if (_result) {
-       Serial.println(_errorDateTime() +"-- ERROR: SQLITE: SQL error: " + String(sqlite3_errmsg(*db)));
+       Serial.println("-- ERROR: SQLITE: SQL error: " + String(sqlite3_errmsg(*db)));
        return _result;
    } else {
-       if (VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"-- VERBOSE: SQLITE: Open database successfully");
+       if (VERBOSE_MODE == 1) Serial.println("-- VERBOSE: SQLITE: Open database successfully");
    }
    return _result;
 }
@@ -388,10 +406,10 @@ int SQLITE_INVERTER::db_exec(sqlite3 *db, const char *sql) {
    uint32_t start = millis();
    int _result = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
    if (_result != SQLITE_OK) {
-       Serial.println(_errorDateTime() +"-- ERROR: SQLITE: SQL error: " + String(zErrMsg));
+       Serial.println("-- ERROR: SQLITE: SQL error: " + String(zErrMsg));
        sqlite3_free(zErrMsg);
    } else {
-       if (VERBOSE_MODE == 1) Serial.println(_errorDateTime() +"--  VERBOSE: SQLITE: db_exec function ran SQL Statement successfully");
+       if (VERBOSE_MODE == 1) Serial.println("--  VERBOSE: SQLITE: db_exec function ran SQL Statement successfully");
    }
    if (VERBOSE_MODE == 2)
    {
@@ -408,26 +426,26 @@ int SQLITE_INVERTER::db_exec(sqlite3 *db, const char *sql) {
 uint8_t SQLITE_INVERTER::card_inserted()
 {
     if(SD.cardType() == CARD_NONE){
-        Serial.println(_errorDateTime() + "-- ERROR: SQLITE: No SD card attached.");
+        Serial.println("-- ERROR: SQLITE: No SD card attached.");
         return 1;
     }
     
     // --- only 0.5mb available ERROR
     if((SD.cardSize() - SD.usedBytes()) < (500 * 1024) )
     {
-        Serial.println(_errorDateTime() + "--- ERROR: SQLITE: less than 500kb available, STORE function not executed!");
+        Serial.println("--- ERROR: SQLITE: less than 500kb available, STORE function not executed!");
         return 2;
     }
 
     // --- less then 100mb available warning
     if((SD.cardSize() - SD.usedBytes()) < (100 * 1024 * 1024) )
     {
-        Serial.println(_errorDateTime() + "--- WARNING: SQLITE: less than 100mb available, please change SD Card!");
+        Serial.println("--- WARNING: SQLITE: less than 100mb available, please change SD Card!");
     }    
     
     if (VERBOSE_MODE == 1)
     {
-      Serial.print(_errorDateTime() + "--- VERBOSE: SQLITE_INVERTER: SD Card Size: ");
+      Serial.print("--- VERBOSE: SQLITE_INVERTER: SD Card Size: ");
       Serial.print(SD.cardSize()/1024/1024.00);
       Serial.print(" Mb | Available: ");
       Serial.print((SD.cardSize() - SD.usedBytes()) /1024/1024.00);
