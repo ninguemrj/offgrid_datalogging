@@ -159,7 +159,7 @@ void setup() {
 
 
 // TESTING Updates latest SQL_ARRAY_SIZE QPIGS array from SQLite Averaged Daily
-SQL_inv.ask_latest_SQL_QPIGS();
+//SQL_inv.ask_latest_SQL_QPIGS(1651795200, 1651881599);
 
 
 //***** SETUP END
