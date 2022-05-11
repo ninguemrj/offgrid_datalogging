@@ -98,45 +98,48 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   {
     uint32_t teste = millis();
     String _daily_date = "";
-
+    String response = "";
+    
     if (request->hasParam("daily_date")) {
-        _daily_date = request->getParam("daily_date")->value();
-        // 0 = INFO msg
-        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: HTTP-GET Paramenter: " + _daily_date);
+    // New date informed as argument ==> Defines new daily date to fetch data from SQL DB (background)
 
+        _daily_date = request->getParam("daily_date")->value();
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: HTTP-GET Paramenter: " + _daily_date);          // 0 = INFO msg
+
+        // Defines new daily date to fetch data from SQL DB (background)
+        _SQL_INV->set_dailyDate(strtoul(_daily_date.c_str(), NULL, 0));
+
+        response = "[[Updating chart data...]]"; //keeping JSON format
     } else {
 
-        _daily_date = String(SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 0, 0, 0));     // PENDING: REPLACE BY TODAY 
-        // 0 = INFO msg
-        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS, using: " + _daily_date);
+    // NO ARGUMENTS ==> Return current DAILY_QPIGS DATA
+
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS preparing JSON");
+        yield();
+
+        //--- BEGIN: Prepare JSON string -------------------------------
+        response = "[";
+        bool _first = true;
+        for (int i=0; i<SQL_ARRAY_SIZE; i++)
+        {
+          if (_first)
+          {
+            response += String("[");
+            _first = false;
+          }
+          else
+          {
+            response += String(",[");
+          }
+          response += int64String((uint64_t)_SQL_INV->SQL_daily_QPIGS[i]._unixtime*1000)+String(",")+String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00))+String("]");
+          yield();
+        }
+        response += String("]");    
+        //--- END: Prepare JSON string -------------------------------
+        
+        Serial.println("time json: " + String(millis()-teste));
     }
-
-    yield();
-    _SQL_INV->ask_latest_SQL_QPIGS( strtoul(_daily_date.c_str(), NULL, 0));
-    yield();
-
-
-    //--- BEGIN: Prepare JSON string -------------------------------
-    String response = "[";
-    bool _first = true;
-    for (int i=0; i<SQL_ARRAY_SIZE; i++)
-    {
-      if (_first)
-      {
-        response += String("[");
-        _first = false;
-      }
-      else
-      {
-        response += String(",[");
-      }
-      response += int64String((uint64_t)_SQL_INV->SQL_daily_QPIGS[i]._unixtime*1000)+String(",")+String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00))+String("]");
-      yield();
-    }
-    response += String("]");    
-    //--- END: Prepare JSON string -------------------------------
     
-    Serial.println("time json: " + String(millis()-teste));
     request->send(200, "application/json", response );
   });
 
