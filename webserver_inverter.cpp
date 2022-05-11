@@ -97,6 +97,24 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   _server.on("/sqlDaily.json", HTTP_GET, [_SQL_INV](AsyncWebServerRequest *request)
   {
     uint32_t teste = millis();
+    String _daily_date = "";
+
+    if (request->hasParam("daily_date")) {
+        _daily_date = request->getParam("daily_date")->value();
+        // 0 = INFO msg
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: HTTP-GET Paramenter: " + _daily_date);
+
+    } else {
+
+        _daily_date = String(SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 0, 0, 0));     // PENDING: REPLACE BY TODAY 
+        // 0 = INFO msg
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS, using: " + _daily_date);
+    }
+
+    yield();
+    _SQL_INV->ask_latest_SQL_QPIGS( strtoul(_daily_date.c_str(), NULL, 0));
+    yield();
+
 
     //--- BEGIN: Prepare JSON string -------------------------------
     String response = "[";
