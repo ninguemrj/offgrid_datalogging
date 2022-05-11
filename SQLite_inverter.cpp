@@ -27,6 +27,8 @@
 
 void SQLITE_INVERTER::begin()
 {
+  this->set_dailyDate(1651795200);  // Defines the first date to calculate SQL_DAILY_QPIGS when starting up ESP32
+                                    // PENDING: Replace by TODAY
 
 }
 
@@ -58,9 +60,10 @@ void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _c
   yield();
 }
 
-void SQLITE_INVERTER::ask_latest_SQL_QPIGS(uint32_t _begin_SearchDateTime)
+void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
 {
 
+    uint32_t _begin_SearchDateTime = this->get_dailyDate();
     uint32_t _end_SearchDateTime = _begin_SearchDateTime + (24 * 60 * 60);   // END = begin + 24hs * 60min * 60seconds
 
     // Clears previous Select results from RES pointer
@@ -585,3 +588,39 @@ void SQLITE_INVERTER::deleteFile(fs::FS &fs, const char * path)
 }
 
 //// END SD Card File manipulation //////////////////////
+
+/*** SQLITE_INVERTER::get_dailyDate()************************************************************
+* Returns the date of SQL_daily_QPIGS data.
+*** ********************************************************************************************/
+uint32_t SQLITE_INVERTER::get_dailyDate()
+  {
+    return this->_SQL_dailyDate;
+  }
+
+/*** SQLITE_INVERTER::set_dailyDate()************************************************************
+* Defines the new date to update SQL_daily_QPIGS with Database data.
+* The SQL function will run in background, inside SQLITE_INVERTER::runLoop()
+*** ********************************************************************************************/
+void SQLITE_INVERTER::set_dailyDate(uint32_t _DateTime)
+  {
+    this->_SQL_dailyDate = _DateTime;
+    this->_recalc_SQL_daily_data = true;
+  }
+
+
+/*** SQLITE_INVERTER::runLoop() ****************************************************************
+* Runs all sort of SQL commands that takes too long to run from callback function inside 
+* webserver modules.
+* 
+* Some SET functions enables flags to permit that SQL sub functions runs in background
+*** ********************************************************************************************/
+void SQLITE_INVERTER::runLoop()
+  {
+    ////////////////////////////////////////////////////////////////////////////////////////// 
+    // Runs SQL command to update SQL_daily_QPIGS upon request by SQLITE_INVERTER::set_dailyDate
+    ////////////////////////////////////////////////////////////////////////////////////////// 
+    if (this->_recalc_SQL_daily_data)
+    {
+      this->ask_daily_SQL_QPIGS();
+    }
+  }

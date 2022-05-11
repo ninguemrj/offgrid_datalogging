@@ -67,12 +67,18 @@ class SQLITE_INVERTER
     }
   
   void begin();
-  void ask_latest_SQL_QPIGS(uint32_t _begin_SearchDateTime);
+  void runLoop();                             // Function to be called directly from LOOP() and run all the time
+  void set_dailyDate(uint32_t _DateTime);
+  uint32_t get_dailyDate();
+  
+
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);
   PV_INVERTER::pipVals_t SQL_daily_QPIGS[SQL_ARRAY_SIZE+1];
 
   
   private:
+    uint32_t _SQL_dailyDate;
+    bool _recalc_SQL_daily_data; // Flag to calculate daily rate in background (loop)
   
     //------- SQLite3 2.3.0 --------------
     const char* data = "Callback function called";
@@ -90,6 +96,7 @@ class SQLITE_INVERTER
 
     //------- Private Functions ----------------
 
+    void ask_daily_SQL_QPIGS();
     void clear_SqlQPIGS();
     uint8_t card_inserted();
     void _average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads);
