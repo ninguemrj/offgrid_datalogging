@@ -142,20 +142,21 @@ void setup() {
   sntp_setoperatingmode(SNTP_OPMODE_POLL);
   sntp_setservername(0, ntpServer1);
   sntp_init();
-  Serial.println("**** SNTP: initialized ...");
-
   
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
-  Serial.println("**** NTP: initialized ...");
+  Serial.print("Obtaing date/time from internet, wait.");
+  while (!getLocalTime(&timeinfo)) Serial.print(".");
+  
+  Serial.println("**** NTP: Synced !");
 
 //***** Prepare SQLITE_inverter to store data on SD CARD **********
   SQL_inv.begin();
-  Serial.println("**** SQL Inverter: initialized ...");
+  Serial.println("**** SQL Inverter: initialized !");
 
 //***** Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
   WEB_inv.begin(ssid, password, &inv, &SQL_inv);
-  Serial.println("**** WebServer Inverter: initialized ...");
+  Serial.println("**** WebServer Inverter: initialized !");
 
 
 // TESTING Updates latest SQL_ARRAY_SIZE QPIGS array from SQLite Averaged Daily
@@ -163,13 +164,17 @@ void setup() {
 
 
 //***** SETUP END
-  Serial.println("**** Setup: initialized.");
+  Serial.println("**** Setup: Concluded!");
 }
 
 ////// Loop /////////////////////////////////////////////////////////////
 
 void loop()
 {
+  
+  SQL_inv.runLoop();
+
+  
   int returned_code = 0;
   // ----------- UPDATE Current DATE/TIME on Loop ---------------------------------
   if (!getLocalTime(&timeinfo)) Serial.println(_errorDateTime() + "-- ERROR: TIME: Failed to obtain time.");
