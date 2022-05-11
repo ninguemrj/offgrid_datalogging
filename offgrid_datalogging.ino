@@ -130,37 +130,38 @@ void setup() {
   Serial.println("**** Setup: initializing ...");
     SUPPORT_FUNCTIONS::logMsg(3, "getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
 
-//***** PVINVERTER ***************************************************
+//***** 1) PVINVERTER ***************************************************
   // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
   inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
   Serial.println("**** PV Inverter: initialized ...");
 
-
-
-
-//***** Prepare NTC Time client **************************************
-  sntp_setoperatingmode(SNTP_OPMODE_POLL);
-  sntp_setservername(0, ntpServer1);
-  sntp_init();
-  
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
-  Serial.print("Obtaing date/time from internet, wait.");
-  while (!getLocalTime(&timeinfo)) Serial.print(".");
-  
-  Serial.println("**** NTP: Synced !");
-
-//***** Prepare SQLITE_inverter to store data on SD CARD **********
+//***** 2) Prepare SQLITE_inverter to store data on SD CARD **********
   SQL_inv.begin();
   Serial.println("**** SQL Inverter: initialized !");
 
-//***** Prepare WEBSERVER for LIVE data ******************************
+//***** 3) Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
   WEB_inv.begin(ssid, password, &inv, &SQL_inv);
   Serial.println("**** WebServer Inverter: initialized !");
 
 
-// TESTING Updates latest SQL_ARRAY_SIZE QPIGS array from SQLite Averaged Daily
-//SQL_inv.ask_latest_SQL_QPIGS(1651795200, 1651881599);
+//***** 4) Prepare NTC Time client **************************************
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_setservername(0, ntpServer1);
+  sntp_init();
+  
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+  Serial.print("Obtaing date/time from internet, wait..");
+  while (!getLocalTime(&timeinfo)) Serial.print(".");
+  
+  Serial.println(" ok!");
+  Serial.println("**** NTP: Synced !");
+
+
+  // IT SHOULD BE ON SQL BEGIN, but no TODAY (NTP) in that point yet)
+  SQL_inv.set_dailyDate(1651795200);  // Defines the first date to calculate SQL_DAILY_QPIGS when starting up ESP32
+                                      // PENDING: Replace by TODAY
+
 
 
 //***** SETUP END
