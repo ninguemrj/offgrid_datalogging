@@ -27,8 +27,6 @@
 
 void SQLITE_INVERTER::begin()
 {
-  this->set_dailyDate(1651795200);  // Defines the first date to calculate SQL_DAILY_QPIGS when starting up ESP32
-                                    // PENDING: Replace by TODAY
 
 }
 
@@ -62,6 +60,8 @@ void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _c
 
 void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
 {
+
+    SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS: this->get_dailyDate(): " + String(this->get_dailyDate()));
 
     uint32_t _begin_SearchDateTime = this->get_dailyDate();
     uint32_t _end_SearchDateTime = _begin_SearchDateTime + (24 * 60 * 60);   // END = begin + 24hs * 60min * 60seconds
@@ -212,8 +212,8 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
         //Serial.println("************************************************************************************************************************");
         //SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
         Serial.println("************************************************************************************************************************");
-        // 3 = DEBUG msg
-        SUPPORT_FUNCTIONS::logMsg(4, "ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
+        // 0 = info msg
+        SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS: dailydate: " + String(_begin_SearchDateTime) + " : Rows num: " + String(_rows) + "| time to SELECT and averaging each 5 minutes: " + String(millis()-teste2));
     
         // 3 = DEBUG msg
     //    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
@@ -594,7 +594,7 @@ void SQLITE_INVERTER::deleteFile(fs::FS &fs, const char * path)
 *** ********************************************************************************************/
 uint32_t SQLITE_INVERTER::get_dailyDate()
   {
-    return this->_SQL_dailyDate;
+    return (uint32_t)this->_SQL_dailyDate;
   }
 
 /*** SQLITE_INVERTER::set_dailyDate()************************************************************
@@ -603,7 +603,7 @@ uint32_t SQLITE_INVERTER::get_dailyDate()
 *** ********************************************************************************************/
 void SQLITE_INVERTER::set_dailyDate(uint32_t _DateTime)
   {
-    this->_SQL_dailyDate = _DateTime;
+    this->_SQL_dailyDate = (uint32_t)_DateTime;
     this->_recalc_SQL_daily_data = true;
   }
 
@@ -621,6 +621,7 @@ void SQLITE_INVERTER::runLoop()
     ////////////////////////////////////////////////////////////////////////////////////////// 
     if (this->_recalc_SQL_daily_data)
     {
+      this->_recalc_SQL_daily_data = false;
       this->ask_daily_SQL_QPIGS();
     }
   }
