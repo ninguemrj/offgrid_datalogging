@@ -30,12 +30,11 @@ void SQLITE_INVERTER::begin()
 
 }
 
-
-
-void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads, uint32_t _rounded_unix_time)
+void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads)
 {
+  yield();
   // Uses rounded minute for average unix time (00 seconds)
-  this->SQL_daily_QPIGS[_count_time_split]._unixtime   =  _rounded_unix_time;
+  //this->SQL_daily_QPIGS[_count_time_split]._unixtime   =  _rounded_unix_time;
 
   // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
   this->SQL_daily_QPIGS[_count_time_split].gridVoltage              = this->SQL_daily_QPIGS[_count_time_split].gridVoltage              / _count_within_split_reads;
@@ -56,113 +55,179 @@ void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _c
   this->SQL_daily_QPIGS[_count_time_split].batterySCC               = this->SQL_daily_QPIGS[_count_time_split].batterySCC               / _count_within_split_reads;
   this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  = this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  / _count_within_split_reads;
   this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           = this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           / _count_within_split_reads;
+  yield();
 }
 
-void SQLITE_INVERTER::ask_latest_SQL_QPIGS()
+void SQLITE_INVERTER::ask_latest_SQL_QPIGS(uint32_t _begin_SearchDateTime)
 {
-/////// SAMPLE CODE FOR SQLite3 SELECT STATEMENT /////////////////
+
+    uint32_t _end_SearchDateTime = _begin_SearchDateTime + (24 * 60 * 60);   // END = begin + 24hs * 60min * 60seconds
+
     // Clears previous Select results from RES pointer
     sqlite3_finalize(res);
 
+    yield();
     //Clears previous QPIGS info stored in SQL_daily_QPIGS
     this->clear_SqlQPIGS();
  
      
-     uint32_t teste2 = millis();
+    uint32_t teste2 = millis();
+    uint32_t _total_rows = 0;
 
-    uint32_t _begin_SearchDateTime = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 0, 0, 0); 
-    uint32_t _end_SearchDateTime   = (uint32_t)SUPPORT_FUNCTIONS::convertToUnixtime(2022, 5, 6, 23, 59, 59); 
-    
-    uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
-    uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
-    uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
+    // Prepars SQL statement ONLY for counting results first
+    String _SQL = String("Select count(*) from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
 
-    String _SQL = String("Select * from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
-    
     // 3 = DEBUG msg
     SUPPORT_FUNCTIONS::logMsg(3, _SQL);
-    
-    rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
-    uint32_t _rows = 0;
 
+    rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
+    if (rc != SQLITE_OK) 
+    {
+        SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: Failed to fetch data: " + String(sqlite3_errmsg(db1)));
+        return;     // PENDING RETURN ERROR CODE
+    }
     while (sqlite3_step(res) == SQLITE_ROW) 
     {
-        yield();
-        // Is the current position read time stamp higher than the limit of the current ´_count_time_split´?
-        // -> YES = Average previous accumulated readings by dividing with '_count_within_split_reads' AND 1) increment ´_count_time_split´ AND 2) zero '_count_within_split_reads';
-        // -> NO = Leave it to continue accumulating readings and counting '_count_within_split_reads'
-        
-        SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
-
-        
-        if (sqlite3_column_int(res, 0) >= (_begin_SearchDateTime + (_time_split * (_count_time_split + 1))))
-        {
-          // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
-          this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads, _begin_SearchDateTime + (_time_split * (_count_time_split + 1))); // Latest argument = rounded unix time
-
-          
-          // Zeros the '_count_within_split_reads' for calculate next averaging
-          _count_within_split_reads = 0;
-
-          // Increments '_count_time_split' to move next array item and check the next 300 seconds (5minutes) split
-          _count_time_split++;
-        
-          // ENDO OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
-        }
-         
-        this->SQL_daily_QPIGS[_count_time_split]._unixtime                 = sqlite3_column_int(res, 0); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].gridVoltage              += sqlite3_column_int(res, 1);
-        this->SQL_daily_QPIGS[_count_time_split].gridFrequency            += sqlite3_column_int(res, 2);
-        this->SQL_daily_QPIGS[_count_time_split].acOutput                 += sqlite3_column_int(res, 3);
-        this->SQL_daily_QPIGS[_count_time_split].acFrequency              += sqlite3_column_int(res, 4);
-        this->SQL_daily_QPIGS[_count_time_split].acApparentPower          += sqlite3_column_int(res, 5);
-        this->SQL_daily_QPIGS[_count_time_split].acActivePower            += sqlite3_column_int(res, 6);
-        this->SQL_daily_QPIGS[_count_time_split].loadPercent              += sqlite3_column_int(res, 7);
-        this->SQL_daily_QPIGS[_count_time_split].busVoltage               += sqlite3_column_int(res, 8);
-        this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           += sqlite3_column_int(res, 9);
-        this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     += sqlite3_column_int(res, 10);
-        this->SQL_daily_QPIGS[_count_time_split].batteryCharge            += sqlite3_column_int(res, 11);
-        this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      += sqlite3_column_int(res, 12);
-        this->SQL_daily_QPIGS[_count_time_split].PVCurrent                += sqlite3_column_int(res, 13);
-        this->SQL_daily_QPIGS[_count_time_split].PVVoltage                += sqlite3_column_int(res, 14);
-        this->SQL_daily_QPIGS[_count_time_split].PVPower                  += sqlite3_column_int(res, 15);
-        this->SQL_daily_QPIGS[_count_time_split].batterySCC               += sqlite3_column_int(res, 16);
-        this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  += sqlite3_column_int(res, 17);
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_SBUpriority       = sqlite3_column_int(res, 18); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_ConfigStatus      = sqlite3_column_int(res, 19); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_FwUpdate          = sqlite3_column_int(res, 20); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_LoadStatus        = sqlite3_column_int(res, 21); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_BattVoltSteady    = sqlite3_column_int(res, 22); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_Chargingstatus    = sqlite3_column_int(res, 23); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_SCCcharge         = sqlite3_column_int(res, 24); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_ACcharge          = sqlite3_column_int(res, 25); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].batOffsetFan              = sqlite3_column_int(res, 26); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].eepromVers                = sqlite3_column_int(res, 27); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           += sqlite3_column_int(res, 28);
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_chargingFloatMode = sqlite3_column_int(res, 29); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_SwitchOn          = sqlite3_column_int(res, 30); // getting only the latest 5min reading
-        this->SQL_daily_QPIGS[_count_time_split].DevStat_dustProof         = sqlite3_column_int(res, 31); // getting only the latest 5min reading
-
-        //Serial.println("Column: _unixtime  | Data: " + String(this->SQL_daily_QPIGS[_count_time_split]._unixtime) + "|  ROW num: " + String(_rows));
-
-        // Continue accumulating readings and counting '_count_within_split_reads'
-        _count_within_split_reads++;
-
-        // Prepare the row counter for the next row
-        _rows ++;
+      yield();
+      _total_rows = sqlite3_column_int(res, 0);
     }
-    // LATEST POSITION: Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
-    this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads, _begin_SearchDateTime + (_time_split * (_count_time_split + 1))); // Latest argument = rounded unix time
+    sqlite3_finalize(res);    
+
+    // 3 = DEBUG msg
+    SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_latest_SQL_QPIGS(): Total rows: " + String(_total_rows));
+
+    if (_total_rows > 0)
+    {
+
+      // _total_rows > 0 : DO ANALISIS
+      
+        yield();
+        uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
+        uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
+        uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
     
-    //Serial.println("************************************************************************************************************************");
-    //SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
-    Serial.println("************************************************************************************************************************");
-    // 3 = DEBUG msg
-    SUPPORT_FUNCTIONS::logMsg(4, "ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
+        // Prepare the unix time for each 5 minutes whitin a day (00:00 to 23:59)
+        // This is done to avoid an array position without date/time, causing issues in the JS Chart
+        for (_count_time_split=0; _count_time_split < SQL_ARRAY_SIZE; _count_time_split++)
+        {
+          yield();
+          this->SQL_daily_QPIGS[_count_time_split]._unixtime = _begin_SearchDateTime + (_time_split * (_count_time_split ));// rounded unix time for each 5 minutes
+        }
+    
+        // Prepars SQL Stetament for fetching data from DB
+        String _SQL = String("Select * from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
+        
+        // 3 = DEBUG msg
+        SUPPORT_FUNCTIONS::logMsg(3, _SQL);
+        
+        rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
+    
+        if (rc != SQLITE_OK) 
+        {
+            SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: Failed to fetch data: " + String(sqlite3_errmsg(db1)));
+            return;       // PENDING RETURN ERROR CODE
+        }
+        
+        uint32_t _rows = 0;
+        _count_time_split = 0;
+        
+        // Go through each row from SQL result and averages in array positions with SQL_ARRAY_SIZE
+        while (sqlite3_step(res) == SQLITE_ROW) 
+        {
+            yield();
+            // Is the current position read time stamp higher than the limit of the current ´_count_time_split´?
+            // -> YES = Average previous accumulated readings by dividing with '_count_within_split_reads' AND 1) increment ´_count_time_split´ AND 2) zero '_count_within_split_reads';
+            // -> NO = Leave it to continue accumulating readings and counting '_count_within_split_reads'
+            
+            SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
+    
+            
+            if (sqlite3_column_int(res, 0) >= (this->SQL_daily_QPIGS[_count_time_split]._unixtime + _time_split))
+            {
+              // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+              this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); // Latest argument = rounded unix time
+    
+              
+              // Zeros the '_count_within_split_reads' for calculate next averaging
+              _count_within_split_reads = 0;
+    
+              // Increments '_count_time_split' to move next array item and check the next 300 seconds (5minutes) split
+              _count_time_split++;
+            
+              // ENDO OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+            }
+    
+             
+    //        this->SQL_daily_QPIGS[_count_time_split]._unixtime                 = sqlite3_column_int(res, 0); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].gridVoltage              += sqlite3_column_int(res, 1);
+            this->SQL_daily_QPIGS[_count_time_split].gridFrequency            += sqlite3_column_int(res, 2);
+            this->SQL_daily_QPIGS[_count_time_split].acOutput                 += sqlite3_column_int(res, 3);
+            this->SQL_daily_QPIGS[_count_time_split].acFrequency              += sqlite3_column_int(res, 4);
+            this->SQL_daily_QPIGS[_count_time_split].acApparentPower          += sqlite3_column_int(res, 5);
+            this->SQL_daily_QPIGS[_count_time_split].acActivePower            += sqlite3_column_int(res, 6);
+            this->SQL_daily_QPIGS[_count_time_split].loadPercent              += sqlite3_column_int(res, 7);
+            this->SQL_daily_QPIGS[_count_time_split].busVoltage               += sqlite3_column_int(res, 8);
+            this->SQL_daily_QPIGS[_count_time_split].batteryVoltage           += sqlite3_column_int(res, 9);
+            this->SQL_daily_QPIGS[_count_time_split].batteryChargeCurrent     += sqlite3_column_int(res, 10);
+            this->SQL_daily_QPIGS[_count_time_split].batteryCharge            += sqlite3_column_int(res, 11);
+            this->SQL_daily_QPIGS[_count_time_split].inverterTemperature      += sqlite3_column_int(res, 12);
+            this->SQL_daily_QPIGS[_count_time_split].PVCurrent                += sqlite3_column_int(res, 13);
+            this->SQL_daily_QPIGS[_count_time_split].PVVoltage                += sqlite3_column_int(res, 14);
+            this->SQL_daily_QPIGS[_count_time_split].PVPower                  += sqlite3_column_int(res, 15);
+            this->SQL_daily_QPIGS[_count_time_split].batterySCC               += sqlite3_column_int(res, 16);
+            this->SQL_daily_QPIGS[_count_time_split].batteryDischargeCurrent  += sqlite3_column_int(res, 17);
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_SBUpriority       = sqlite3_column_int(res, 18); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_ConfigStatus      = sqlite3_column_int(res, 19); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_FwUpdate          = sqlite3_column_int(res, 20); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_LoadStatus        = sqlite3_column_int(res, 21); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_BattVoltSteady    = sqlite3_column_int(res, 22); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_Chargingstatus    = sqlite3_column_int(res, 23); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_SCCcharge         = sqlite3_column_int(res, 24); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_ACcharge          = sqlite3_column_int(res, 25); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].batOffsetFan              = sqlite3_column_int(res, 26); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].eepromVers                = sqlite3_column_int(res, 27); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].PV1_chargPower           += sqlite3_column_int(res, 28);
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_chargingFloatMode = sqlite3_column_int(res, 29); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_SwitchOn          = sqlite3_column_int(res, 30); // getting only the latest 5min reading
+            this->SQL_daily_QPIGS[_count_time_split].DevStat_dustProof         = sqlite3_column_int(res, 31); // getting only the latest 5min reading
+    
+            //Serial.println("Column: _unixtime  | Data: " + String(this->SQL_daily_QPIGS[_count_time_split]._unixtime) + "|  ROW num: " + String(_rows));
+    
+            yield();
 
-    // 3 = DEBUG msg
-//    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
+            // Continue accumulating readings and counting '_count_within_split_reads'
+            _count_within_split_reads++;
+    
+            // Prepare the row counter for the next row
+            _rows ++;
+        }
+        // LATEST POSITION: Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+        this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); // Latest argument = rounded unix time
+        sqlite3_finalize(res);         
 
+        
+        //Serial.println("************************************************************************************************************************");
+        //SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
+        Serial.println("************************************************************************************************************************");
+        // 3 = DEBUG msg
+        SUPPORT_FUNCTIONS::logMsg(4, "ROW num: " + String(_rows) + "| time SELECT and averaging each 5 minutes: " + String(millis()-teste2));
+    
+        // 3 = DEBUG msg
+    //    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
+
+    
+    
+        yield();
+    
+    
+    }
+    else
+    {
+        yield();
+
+      // _total_rows <= 0 : NO RESULT
+            SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: ZERO RESULTS from SQL CMD: " + _SQL);
+    }
 }
 
 
@@ -188,6 +253,7 @@ void SQLITE_INVERTER::clear_SqlQPIGS()
     this->SQL_daily_QPIGS[_rows].PVCurrent                = 0;
     this->SQL_daily_QPIGS[_rows].PVVoltage                = 0;
     this->SQL_daily_QPIGS[_rows].PVPower                  = 0;
+        yield();
     this->SQL_daily_QPIGS[_rows].batterySCC               = 0;
     this->SQL_daily_QPIGS[_rows].batteryDischargeCurrent  = 0;
     this->SQL_daily_QPIGS[_rows].DevStat_SBUpriority      = 0;
@@ -204,6 +270,7 @@ void SQLITE_INVERTER::clear_SqlQPIGS()
     this->SQL_daily_QPIGS[_rows].DevStat_chargingFloatMode= 0;
     this->SQL_daily_QPIGS[_rows].DevStat_SwitchOn         = 0;
     this->SQL_daily_QPIGS[_rows].DevStat_dustProof        = 0;
+        yield();
   }
 }
 
