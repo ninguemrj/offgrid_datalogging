@@ -67,7 +67,7 @@ class SQLITE_INVERTER
     }
   
   void begin();
-  void ask_latest_SQL_QPIGS();
+  void ask_latest_SQL_QPIGS(uint32_t _begin_SearchDateTime);
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);
   PV_INVERTER::pipVals_t SQL_daily_QPIGS[SQL_ARRAY_SIZE+1];
 
@@ -92,7 +92,7 @@ class SQLITE_INVERTER
 
     void clear_SqlQPIGS();
     uint8_t card_inserted();
-    void _average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads, uint32_t _rounded_unix_time);
+    void _average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads);
   
     // --- SD Sample functions from SD_test.ino example ----
     // --- (https://github.com/espressif/arduino-esp32/tree/master/libraries/SD/examples/SD_Test)
