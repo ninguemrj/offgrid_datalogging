@@ -143,6 +143,11 @@
                             <div id="chart-BatDischarge" class="container"></div>
                         </div>
                         <div class="tab-pane fade" id="tab2primary">
+                            <form id="day_select" name='params' method='POST' action='query_daily_db'>
+                                Choose a date (UNIX timestamp): 
+                                <input type=text style='font-size: large' value='' id='daily_date' name='daily_date'/>
+                                <input type=submit style='font-size: large' value='Query database'/>
+                            </form>
                             <div id="chart-BatVoltage_DAY" class="container"></div>
                         </div>
                         <div class="tab-pane fade" id="tab3primary">Primary 3</div>
@@ -354,48 +359,68 @@
 
         // Create the chart
         window.addEventListener('load', async function () {
-            const result = await fetch('http://192.168.0.122/sqlDaily.json');
-            if (result.ok) jdata_battery = await result.json();
-            chart = new Highcharts.Chart({
-                chart: {
-                    renderTo: 'chart-BatVoltage_DAY'
-                },
-                title: {
-                    text: 'Battery Volts by day'
-                },
-                plotOptions: {
-                    line: 
-                    { 
-                        animation: false,
-                        dataLabels: 
+
+
+            // Access the form element...
+            const form = document.getElementById( "day_select" );
+
+            // ...and take over its submit event.
+            form.addEventListener( "submit", async function ( event ) {
+                event.preventDefault();
+
+                var myHeaders = new Headers();
+                myHeaders.append('pragma', 'no-cache');
+                myHeaders.append('cache-control', 'no-cache');
+
+                var myInit = 
+                {
+                    method: 'GET',
+                    headers: myHeaders,
+                };
+
+                const result = await fetch('http://192.168.0.122/sqlDaily.json?daily_date=' + document.getElementById("daily_date").value, myInit);
+                if (result.ok) jdata_battery = await result.json();
+                chart = new Highcharts.Chart({
+                    chart: {
+                        renderTo: 'chart-BatVoltage_DAY'
+                    },
+                    title: {
+                        text: 'Battery Volts by day'
+                    },
+                    plotOptions: {
+                        line: 
                         { 
-                            enabled: false,
-                            style: 
-                            {
-                                fontWeight: 'normal',
-                            } 
+                            animation: false,
+                            dataLabels: 
+                            { 
+                                enabled: false,
+                                style: 
+                                {
+                                    fontWeight: 'normal',
+                                } 
+                            }
+                        },
+                        series: { color: '#059e8a', lineWidth: 2 } 
+                    },
+                    xAxis: 
+                    {
+                        type: 'datetime',
+                        dateTimeLabelFormats: { second: '%H:%M:%S' }
+                    },
+                    yAxis: 
+                    {
+                        title: {
+                            text: 'Volts',
+                            margin: 10
                         }
                     },
-                    series: { color: '#059e8a', lineWidth: 2 } 
-                },
-                xAxis: 
-                {
-                    type: 'datetime',
-                    dateTimeLabelFormats: { second: '%H:%M:%S' }
-                },
-                yAxis: 
-                {
-                    title: {
-                        text: 'Volts',
-                        margin: 10
-                    }
-                },
-                series: [{
-                    type: 'line',
-                    name: 'Battery Volts',
-                    data: jdata_battery
-                }]
-            });
+                    series: [{
+                        type: 'line',
+                        name: 'Battery Volts',
+                        data: jdata_battery
+                    }]
+                } );
+            } );
         });
 
         /////////////////////////////////////////////////////////////////////
