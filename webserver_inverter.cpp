@@ -109,7 +109,7 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
         // Defines new daily date to fetch data from SQL DB (background)
         _SQL_INV->set_dailyDate(strtoul(_daily_date.c_str(), NULL, 0));
 
-        response = "[[Updating chart data...]]"; //keeping JSON format
+        response = "[[""Updating chart data...""]]"; //keeping JSON format
     } else {
 
     // NO ARGUMENTS ==> Return current DAILY_QPIGS DATA
