@@ -59,34 +59,58 @@ void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _c
 }
 
 void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
-{
+{   
+    uint32_t teste2 = millis();
+    
+    //-------------------------------------------------------------
+    // STEP # 1 Defines Daily Date (begin and End search variables)
+    //-------------------------------------------------------------
 
-    SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS: this->get_dailyDate(): " + String(this->get_dailyDate()));
-
+        SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #1: this->get_dailyDate(): " + String(this->get_dailyDate()));
     uint32_t _begin_SearchDateTime = this->get_dailyDate();
     uint32_t _end_SearchDateTime = _begin_SearchDateTime + (24 * 60 * 60);   // END = begin + 24hs * 60min * 60seconds
 
-    // Clears previous Select results from RES pointer
-    sqlite3_finalize(res);
+    //-------------------------------------------------------------
+    // STEP #2 Clears previous QPIGS info stored in SQL_daily_QPIGS
+    //-------------------------------------------------------------
 
-    yield();
-    //Clears previous QPIGS info stored in SQL_daily_QPIGS
     this->clear_SqlQPIGS();
- 
-     
-    uint32_t teste2 = millis();
+        SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #2: this->clear_SqlQPIGS() ");
+
+
+    //-------------------------------------------------------------
+    // STEP #3 SET each array position with corresponding date/time
+    //         info even if no result from DB, in order to have a
+    //         complete time line for JSChart
+    //-------------------------------------------------------------
+
+    uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
+    uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
+    uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
+
+    // Prepare the unix time for each 5 minutes whitin a day (00:00 to 23:59)
+    // This is done to avoid an array position without date/time, causing issues in the JS Chart
+    for (_count_time_split=0; _count_time_split < SQL_ARRAY_SIZE; _count_time_split++)
+    {
+      yield();
+      this->SQL_daily_QPIGS[_count_time_split]._unixtime = _begin_SearchDateTime + (_time_split * (_count_time_split ));// rounded unix time for each 5 minutes
+    }
+        SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #3: _unixtime ");
+
+    
+    //-------------------------------------------------------------
+    // STEP #4 Clears previous Select results from RES pointer
+    //         An counts how many rows in the selected dates
+    //-------------------------------------------------------------
+
+    //sqlite3_finalize(res);
     uint32_t _total_rows = 0;
-
-    // Prepars SQL statement ONLY for counting results first
     String _SQL = String("Select count(*) from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
-
-    // 3 = DEBUG msg
-    SUPPORT_FUNCTIONS::logMsg(3, _SQL);
-
+        SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #4: SQL CMD: " + _SQL);
     rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
     if (rc != SQLITE_OK) 
     {
-        SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: Failed to fetch data: " + String(sqlite3_errmsg(db1)));
+        SUPPORT_FUNCTIONS::logMsg(2, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): Failed to fetch data: " + String(sqlite3_errmsg(db1)) + " | SQL CMD: " + _SQL);
         return;     // PENDING RETURN ERROR CODE
     }
     while (sqlite3_step(res) == SQLITE_ROW) 
@@ -95,42 +119,32 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
       _total_rows = sqlite3_column_int(res, 0);
     }
     sqlite3_finalize(res);    
+        SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_latest_SQL_QPIGS() #4: Total rows: " + String(_total_rows));
 
-    // 3 = DEBUG msg
-    SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_latest_SQL_QPIGS(): Total rows: " + String(_total_rows));
 
+    
+    //-------------------------------------------------------------
+    // STEP #5 IF = 0: NO DB results, INFO message and go out
+    //         IF > 0: Continues the analisis
+    //-------------------------------------------------------------
+    
     if (_total_rows > 0)
     {
 
       // _total_rows > 0 : DO ANALISIS
       
-        yield();
-        uint32_t _time_split = 5 * 60 ;         // 5 minutes * 60 seconds in order to average all reads withing each 5 minutes
-        uint32_t _count_time_split = 0;         //from 0 to SQL_ARRAY_SIZE (for time split will be from 1 to SQL_ARRAY_SIZE+1)
-        uint32_t _count_within_split_reads = 0; // for counting how many rows from SqlDB were read within 5 minutes (for averaging only)
     
-        // Prepare the unix time for each 5 minutes whitin a day (00:00 to 23:59)
-        // This is done to avoid an array position without date/time, causing issues in the JS Chart
-        for (_count_time_split=0; _count_time_split < SQL_ARRAY_SIZE; _count_time_split++)
-        {
-          yield();
-          this->SQL_daily_QPIGS[_count_time_split]._unixtime = _begin_SearchDateTime + (_time_split * (_count_time_split ));// rounded unix time for each 5 minutes
-        }
-    
-        // Prepars SQL Stetament for fetching data from DB
+    //-------------------------------------------------------------
+    // STEP #6 Fecth information from SQLite
+    //-------------------------------------------------------------
         String _SQL = String("Select * from 'QPIGS' WHERE (") + _begin_SearchDateTime + String(" <= _unixtime AND _unixtime <= ") + _end_SearchDateTime + String(") ORDER BY _unixtime ASC");
-        
-        // 3 = DEBUG msg
-        SUPPORT_FUNCTIONS::logMsg(3, _SQL);
-        
-        rc = sqlite3_prepare_v2(db1, _SQL.c_str()  , 1000, &res, &tail);
-    
+            SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #6: SQL CMD: " +_SQL);
+        rc = sqlite3_prepare_v2(db1, _SQL.c_str(), 1000, &res, &tail);
         if (rc != SQLITE_OK) 
         {
-            SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: Failed to fetch data: " + String(sqlite3_errmsg(db1)));
+            SUPPORT_FUNCTIONS::logMsg(2, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): Failed to fetch data: " + String(sqlite3_errmsg(db1)) + " | SQL CMD: " + _SQL);
             return;       // PENDING RETURN ERROR CODE
         }
-        
         uint32_t _rows = 0;
         _count_time_split = 0;
         
@@ -138,30 +152,58 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
         while (sqlite3_step(res) == SQLITE_ROW) 
         {
             yield();
+            
             // Is the current position read time stamp higher than the limit of the current ´_count_time_split´?
             // -> YES = Average previous accumulated readings by dividing with '_count_within_split_reads' AND 1) increment ´_count_time_split´ AND 2) zero '_count_within_split_reads';
             // -> NO = Leave it to continue accumulating readings and counting '_count_within_split_reads'
             
-            SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
+                SUPPORT_FUNCTIONS::logMsg(3, "SQLITE_INVERTER::ask_daily_SQL_QPIGS():" + String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
     
             
+    //-------------------------------------------------------------
+    // STEP #7 Check read date is within current array position
+    //         IF HIGHER: Check for averaging or move the array counter
+    //         IF LOWER: Acumulates for future averaging
+    //-------------------------------------------------------------
             if (sqlite3_column_int(res, 0) >= (this->SQL_daily_QPIGS[_count_time_split]._unixtime + _time_split))
             {
-              // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
-              this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); // Latest argument = rounded unix time
-    
-              
-              // Zeros the '_count_within_split_reads' for calculate next averaging
-              _count_within_split_reads = 0;
-    
-              // Increments '_count_time_split' to move next array item and check the next 300 seconds (5minutes) split
-              _count_time_split++;
-            
-              // ENDO OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+
+    //-------------------------------------------------------------
+    // STEP #8 Check if HIGHER date has read to averaging or not 
+    //         IF > 0: Averaging,  move next array counter and reset within counter
+    //         IF = 0: move array counter only
+    //-------------------------------------------------------------
+
+                if(_count_within_split_reads == 0)
+                {
+    //-------------------------------------------------------------
+    // STEP #8.1 Adjust array counter position
+    //-------------------------------------------------------------
+
+                  _count_time_split = (sqlite3_column_int(res, 0) - _begin_SearchDateTime) / _time_split; // Current time -/- begin time (check offset) and divided by time step
+                } 
+                else
+                {
+
+    //-------------------------------------------------------------
+    // STEP #8.2 Average readings and reser counters for next 5 minutes
+    //-------------------------------------------------------------
+                  // BEGIN OF Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
+                  this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); 
+        
+                  // Zeros the '_count_within_split_reads' for calculate next averaging
+                  _count_within_split_reads = 0;
+        
+                  // Increments '_count_time_split' to move array counter to the next read date/time (even if not sequencial
+                  _count_time_split = (sqlite3_column_int(res, 0) - _begin_SearchDateTime) / _time_split; // Current time -/- begin time (check offset) and divided by time step
+
+                }
             }
     
+    //-------------------------------------------------------------
+    // STEP #9 Acumulates readings
+    //-------------------------------------------------------------
              
-    //        this->SQL_daily_QPIGS[_count_time_split]._unixtime                 = sqlite3_column_int(res, 0); // getting only the latest 5min reading
             this->SQL_daily_QPIGS[_count_time_split].gridVoltage              += sqlite3_column_int(res, 1);
             this->SQL_daily_QPIGS[_count_time_split].gridFrequency            += sqlite3_column_int(res, 2);
             this->SQL_daily_QPIGS[_count_time_split].acOutput                 += sqlite3_column_int(res, 3);
@@ -194,31 +236,27 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
             this->SQL_daily_QPIGS[_count_time_split].DevStat_SwitchOn          = sqlite3_column_int(res, 30); // getting only the latest 5min reading
             this->SQL_daily_QPIGS[_count_time_split].DevStat_dustProof         = sqlite3_column_int(res, 31); // getting only the latest 5min reading
     
-            //Serial.println("Column: _unixtime  | Data: " + String(this->SQL_daily_QPIGS[_count_time_split]._unixtime) + "|  ROW num: " + String(_rows));
-    
             yield();
 
+    //-------------------------------------------------------------
+    // STEP #10 increment counters
+    //-------------------------------------------------------------
             // Continue accumulating readings and counting '_count_within_split_reads'
             _count_within_split_reads++;
     
             // Prepare the row counter for the next row
             _rows ++;
         }
+
+    //-------------------------------------------------------------
+    // STEP #11 Average the last readings
+    //-------------------------------------------------------------
+
         // LATEST POSITION: Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
         this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); // Latest argument = rounded unix time
+
         sqlite3_finalize(res);         
-
-        
-        //Serial.println("************************************************************************************************************************");
-        //SUPPORT_FUNCTIONS::logMsg(3, String(_count_time_split)+"/"+String(_count_within_split_reads)+": Unix current row:"+String(sqlite3_column_int(res, 0))+"/"+String(_begin_SearchDateTime + (_time_split * (_count_time_split + 1)))+"/ Batt: "+String(this->SQL_daily_QPIGS[_count_time_split].batteryVoltage));
-        Serial.println("************************************************************************************************************************");
-        // 0 = info msg
-        SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS: dailydate: " + String(_begin_SearchDateTime) + " : Rows num: " + String(_rows) + "| time to SELECT and averaging each 5 minutes: " + String(millis()-teste2));
-    
-        // 3 = DEBUG msg
-    //    SUPPORT_FUNCTIONS::logMsg(3, "03-getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
-
-    
+            SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): dailydate: " + String(_begin_SearchDateTime) + " : Rows num: " + String(_rows) + "| time to SELECT and averaging each 5 minutes: " + String(millis()-teste2));
     
         yield();
     
@@ -229,7 +267,7 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
         yield();
 
       // _total_rows <= 0 : NO RESULT
-            SUPPORT_FUNCTIONS::logMsg(2, "SQL_Inverter: ZERO RESULTS from SQL CMD: " + _SQL);
+            SUPPORT_FUNCTIONS::logMsg(2, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): ZERO RESULTS from SQL CMD: " + _SQL);
     }
 }
 
