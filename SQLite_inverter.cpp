@@ -27,7 +27,9 @@
 
 void SQLITE_INVERTER::begin()
 {
-
+   // Prevents webserver to send json with daily readings before preparing the daily readings
+   // This flag becomes true after SQLITE_INVERTER::ask_daily_SQL_QPIGS()
+   this->daily_data_updated = false;
 }
 
 void SQLITE_INVERTER::_average_SQL_QPIGS(uint32_t _count_time_split, uint32_t _count_within_split_reads)
@@ -254,21 +256,18 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
 
         // LATEST POSITION: Averaging previous accumulated readings by dividing the SUM with "how many rows were accumulated"
         this->_average_SQL_QPIGS(_count_time_split, _count_within_split_reads); // Latest argument = rounded unix time
-
         sqlite3_finalize(res);         
             SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): dailydate: " + String(_begin_SearchDateTime) + " : Rows num: " + String(_rows) + "| time to SELECT and averaging each 5 minutes: " + String(millis()-teste2));
-    
-        yield();
-    
-    
     }
     else
     {
-        yield();
-
       // _total_rows <= 0 : NO RESULT
             SUPPORT_FUNCTIONS::logMsg(2, "SQLITE_INVERTER::ask_daily_SQL_QPIGS(): ZERO RESULTS from SQL CMD: " + _SQL);
     }
+
+    //permits webserver to send daily data as json
+    this->daily_data_updated = true;
+    yield();
 }
 
 
@@ -660,6 +659,7 @@ void SQLITE_INVERTER::runLoop()
     if (this->_recalc_SQL_daily_data)
     {
       this->_recalc_SQL_daily_data = false;
+      this->daily_data_updated = false;
       this->ask_daily_SQL_QPIGS();
     }
   }

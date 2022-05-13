@@ -70,6 +70,7 @@ class SQLITE_INVERTER
   void runLoop();                             // Function to be called directly from LOOP() and run all the time
   void set_dailyDate(uint32_t _DateTime);
   uint32_t get_dailyDate();
+  bool daily_data_updated;
   
 
   uint8_t sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _stored_online);

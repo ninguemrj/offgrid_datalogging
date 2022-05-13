@@ -145,7 +145,7 @@
                         <div class="tab-pane fade" id="tab2primary">
                             <form id="day_select" name='params' method='POST' action='query_daily_db'>
                                 Choose a date (UNIX timestamp): 
-                                <input type=text style='font-size: large' value='' id='daily_date' name='daily_date'/>
+                                <input type=date style='font-size: large' value='' id='daily_date' name='daily_date'/>
                                 <input type=submit style='font-size: large' value='Query database'/>
                             </form>
                             <div id="chart-BatVoltage_DAY" class="container"></div>
@@ -355,6 +355,10 @@
         ///// chart-BatVoltage /////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////
 
+        function delay(time) {
+            return new Promise(resolve => setTimeout(resolve, time));
+        }
+
         let chart; // global
 
         // Create the chart
@@ -363,6 +367,7 @@
 
             // Access the form element...
             const form = document.getElementById( "day_select" );
+
 
             // ...and take over its submit event.
             form.addEventListener( "submit", async function ( event ) {
@@ -378,8 +383,20 @@
                     headers: myHeaders,
                 };
 
-                const result = await fetch('http://192.168.0.122/sqlDaily.json?daily_date=' + document.getElementById("daily_date").value, myInit);
-                if (result.ok) jdata_battery = await result.json();
+                const date = new Date(document.getElementById("daily_date").value);
+                const choosen_date = date.getTime() / 1000; //millis to seconds                
+                
+                const result = await fetch('http://192.168.0.122/sqlDaily.json?daily_date=' + choosen_date, myInit);
+                if (result.ok) feedback = await result.json();
+
+                while (feedback[0][0] == "Updating...")
+                {
+                    await delay(1000);
+                    const result = await fetch('http://192.168.0.122/sqlDaily.json', myInit);
+                    if (result.ok) feedback = await result.json();
+                }
+
+
                 chart = new Highcharts.Chart({
                     chart: {
                         renderTo: 'chart-BatVoltage_DAY'
@@ -417,7 +434,7 @@
                     series: [{
                         type: 'line',
                         name: 'Battery Volts',
-                        data: jdata_battery
+                        data: feedback
                     }]
                 } );
             } );
