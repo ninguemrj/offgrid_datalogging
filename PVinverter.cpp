@@ -187,7 +187,7 @@ String PV_INVERTER::debug_QPIRI()
   //3 = debug msg
   SUPPORT_FUNCTIONS::logMsg(3,"PVInverter: debug_QPIRI: First line");
 
-  String _response = String("\n\rUNIX TIME:..................: ") + String(this->QPIRI_values._unixtime + __FUSO__) + " Seconds\n\r" +
+  String _response = String("\n\rUNIX TIME:..................: ") + String(this->QPIRI_values._unixtime) + " Seconds\n\r" +
   // B = xx.x V * 10
   "GridRatingVoltage...........: " + String(this->QPIRI_values.GridRatingVoltage / 10.0 ) + " V\n\r" +
   
@@ -515,7 +515,7 @@ void PV_INVERTER::clear_QPIGS (pipVals_t &_thisPIP)
 
 String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
 {
-  String _response = String("\n\rUNIX TIME:................ ") + String(_thisPIP._unixtime + __FUSO__) + " Seconds\n\r" +
+  String _response = String("\n\rUNIX TIME:................ ") + String(_thisPIP._unixtime) + " Seconds\n\r" +
   "Grid Voltage:............. " + String(_thisPIP.gridVoltage) + " V\n\r"             +
   "Grid Frequency:........... " + String(_thisPIP.gridFrequency/10.0) + " Hz\n\r"     +
   "AC Output:................ " + String(_thisPIP.acOutput) + " V\n\r"                +

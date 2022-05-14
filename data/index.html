@@ -185,6 +185,7 @@
         let _bulk_volts; // stores the bulk charge voltage set in inverter
         let _float_volts; // stores the minimumfloat charge voltage set in inverter 
         let _back_to_grid_volts; // stores the back to grid voltage set in inverter
+        const _timezone = new Date().getTimezoneOffset()
 
         // HEADERS PREPARATION FOR ALL FETCH FUNCTIONS
         var myHeaders = new Headers();
@@ -426,11 +427,11 @@
                     if (result.ok) feedback = await result.json();
                 }
 
-                var feedback_PV      = feedback[0].map((e,i) => [e,feedback[1][i]]);
-                var feedback_ACPower = feedback[0].map((e,i) => [e,feedback[2][i]]);
-                var feedback_batVolt = feedback[0].map((e,i) => [e,feedback[3][i]]);
-                var feedback_batChar = feedback[0].map((e,i) => [e,feedback[4][i]]);
-                var feedback_batDisC = feedback[0].map((e,i) => [e,feedback[5][i]]);
+                var _feedback_PV      = feedback[0].map((e,i) => [e,feedback[1][i]]);
+                var _feedback_ACPower = feedback[0].map((e,i) => [e,feedback[2][i]]);
+                var _feedback_batVolt = feedback[0].map((e,i) => [e,feedback[3][i]]);
+                var _feedback_batChar = feedback[0].map((e,i) => [e,feedback[4][i]]);
+                var _feedback_batDisC = feedback[0].map((e,i) => [e,feedback[5][i]]);
 
         //--- STEP #4.1: BAT VOLTS: Update CHART with new data from ESP32                
                 bat_daily_chart = new Highcharts.Chart({
@@ -445,8 +446,9 @@
                         min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
                         title: { text: 'Volts', margin: 10 }
                     },
+                    time: { timezoneOffset: _timezone },
                     series: [{ type: 'line', name: 'Battery Volts',
-                        data: feedback_batVolt
+                        data: _feedback_batVolt
                     }]
                 } );
 
@@ -462,8 +464,9 @@
                     yAxis: {
                         title: { text: 'Watts', margin: 10 }
                     },
+                    time: { timezoneOffset: _timezone },
                     series: [{ type: 'line', name: 'Watts',
-                        data: feedback_PV 
+                        data: _feedback_PV 
                     }]
                 } );
 
@@ -479,8 +482,9 @@
                     yAxis: {
                         title: { text: 'Watts', margin: 10 }
                     },
+                    time: { timezoneOffset: _timezone },
                     series: [{ type: 'line', name: 'Watts',
-                        data: feedback_ACPower 
+                        data: _feedback_ACPower 
                     }]
                 } );
 
@@ -496,8 +500,9 @@
                     yAxis: {
                         title: { text: 'Ampers', margin: 10 }
                     },
+                    time: { timezoneOffset: _timezone },
                     series: [{ type: 'line', name: 'Ampers',
-                        data: feedback_batChar 
+                        data: _feedback_batChar 
                     }]
                 } );
 
@@ -514,8 +519,9 @@
                     yAxis: {
                         title: { text: 'Ampers', margin: 10 }
                     },
+                    time: { timezoneOffset: _timezone },
                     series: [{ type: 'line', name: 'Ampers',
-                        data: feedback_batDisC
+                        data: _feedback_batDisC
                     }]
                 } );
 

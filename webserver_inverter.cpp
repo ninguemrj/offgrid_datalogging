@@ -151,7 +151,7 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
                 response_Bat_charg    += ",";
                 response_Bat_discharg += ",";
               }
-              response_time         += int64String((uint64_t)(_SQL_INV->SQL_daily_QPIGS[i]._unixtime + __FUSO__)*1000);
+              response_time         += int64String((uint64_t)(_SQL_INV->SQL_daily_QPIGS[i]._unixtime)*1000);
               response_PV           += String((_SQL_INV->SQL_daily_QPIGS[i].PV1_chargPower));
               response_ACPower      += String((_SQL_INV->SQL_daily_QPIGS[i].acActivePower));
               response_BatV         += String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00));

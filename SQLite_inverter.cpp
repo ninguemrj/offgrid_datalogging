@@ -69,7 +69,7 @@ void SQLITE_INVERTER::ask_daily_SQL_QPIGS()
     //-------------------------------------------------------------
 
         SUPPORT_FUNCTIONS::logMsg(0, "SQLITE_INVERTER::ask_daily_SQL_QPIGS() #1: this->get_dailyDate(): " + String(this->get_dailyDate()));
-    uint32_t _begin_SearchDateTime = this->get_dailyDate();
+    uint32_t _begin_SearchDateTime = this->get_dailyDate() - __FUSO__;
     uint32_t _end_SearchDateTime = _begin_SearchDateTime + (24 * 60 * 60);   // END = begin + 24hs * 60min * 60seconds
 
     //-------------------------------------------------------------
