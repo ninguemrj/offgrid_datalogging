@@ -19,6 +19,9 @@
 
 #include <Int64String.h>
 #include <WiFi.h>
+#include "HTTPClient.h"
+#include <EasyDDNS.h>
+
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
 //#include <ArduinoJson.h>
@@ -33,6 +36,7 @@ class WEBSERVER_INVERTER
     WEBSERVER_INVERTER() {};
 
     void begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV);
+    void runLoop();
 
 
   private:
