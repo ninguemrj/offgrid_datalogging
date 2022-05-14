@@ -174,6 +174,7 @@ void loop()
 {
   
   SQL_inv.runLoop();
+  WEB_inv.runLoop();
 
   
   int returned_code = 0;
