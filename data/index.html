@@ -144,11 +144,15 @@
                         </div>
                         <div class="tab-pane fade" id="tab2primary">
                             <form id="day_select" name='params' method='POST' action='query_daily_db'>
-                                Choose a date (UNIX timestamp): 
+                                Pick a date: 
                                 <input type=date style='font-size: large' value='' id='daily_date' name='daily_date'/>
-                                <input type=submit style='font-size: large' value='Query database'/>
+                                <input type=submit style='font-size: large' value='Update chart'/>
                             </form>
+                            <div id="chart-PVPower_DAY" class="container"></div>
+                            <div id="chart-ActivePower_DAY" class="container"></div>
                             <div id="chart-BatVoltage_DAY" class="container"></div>
+                            <div id="chart-BatCharge_DAY" class="container"></div>
+                            <div id="chart-BatDischarge_DAY" class="container"></div>
                         </div>
                         <div class="tab-pane fade" id="tab3primary">Primary 3</div>
                         <div class="tab-pane fade" id="tab4primary">Primary 4</div>
@@ -170,6 +174,45 @@
     -->
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script>
+
+    //--- BEGIN: GENERAL FUNCTIONS AND GLOBAL VARIABLES --------------------------
+        function delay(time) {
+            return new Promise(resolve => setTimeout(resolve, time));
+        }
+
+        let bat_daily_chart; // global
+        let _min_volts; // stores the minimum voltage (CUTOFF) set in inverter for limiting battery voltage chart scales
+        let _bulk_volts; // stores the bulk charge voltage set in inverter
+        let _float_volts; // stores the minimumfloat charge voltage set in inverter 
+        let _back_to_grid_volts; // stores the back to grid voltage set in inverter
+
+        // HEADERS PREPARATION FOR ALL FETCH FUNCTIONS
+        var myHeaders = new Headers();
+        myHeaders.append('pragma', 'no-cache');
+        myHeaders.append('cache-control', 'no-cache');
+        var myInit = 
+        {
+            method: 'GET',
+            headers: myHeaders,
+        };
+    //--- END: GENERAL FUNCTIONS AND GLOBAL VARIABLES --------------------------
+
+
+    //--- BEGIN: RUNS AFTER LOADING HTML BUT BEFORE CSS AND IMAGES ---------------------------
+        window.addEventListener('DOMContentLoaded', async function () {
+            const QPIRI_result = await fetch('./QPIRI.json', myInit);
+            if (QPIRI_result.ok) 
+            {
+                QPIRI_array = await QPIRI_result.json();
+                _min_volts = QPIRI_array[0];
+                _bulk_volts = QPIRI_array[1];
+                _float_volts = QPIRI_array[2];
+                _back_to_grid_volts = QPIRI_array[3];
+            }
+
+        });
+    //--- END: RUNS AFTER LOADING HTML BUT BEFORE CSS AND IMAGES ---------------------------
+
 
 
         /////////////////////////////////////////////////////////////////////
@@ -218,7 +261,7 @@
         };
         xhttp.open("GET", "/charger_status", true);
         xhttp.send();
-        }, 2000);
+        }, 30000);
 
 
         /////////////////////////////////////////////////////////////////////
@@ -328,6 +371,7 @@
             dateTimeLabelFormats: { second: '%H:%M:%S' }
         },
         yAxis: {
+            min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
             title: { text: 'Voltage (V)' }
         },
         credits: { enabled: false }
@@ -355,40 +399,26 @@
         ///// chart-BatVoltage /////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////
 
-        function delay(time) {
-            return new Promise(resolve => setTimeout(resolve, time));
-        }
 
-        let chart; // global
 
-        // Create the chart
+        // RUNS AFTER LOADING HTML, CSS AND IMAGES
         window.addEventListener('load', async function () {
 
 
-            // Access the form element...
+//--- BEGIN: UPDATES DAILY CHARTS -------------------------------------------------------------------------            
+
+        //--- STEP #1: Capture form button click
             const form = document.getElementById( "day_select" );
-
-
-            // ...and take over its submit event.
             form.addEventListener( "submit", async function ( event ) {
-                event.preventDefault();
-
-                var myHeaders = new Headers();
-                myHeaders.append('pragma', 'no-cache');
-                myHeaders.append('cache-control', 'no-cache');
-
-                var myInit = 
-                {
-                    method: 'GET',
-                    headers: myHeaders,
-                };
-
+                event.preventDefault();     // DO NOT PERMIT PAGE LOAD ON BUTTON CLICK
                 const date = new Date(document.getElementById("daily_date").value);
                 const choosen_date = date.getTime() / 1000; //millis to seconds                
                 
+        //--- STEP #2: Send new date to ESP32
                 const result = await fetch('http://192.168.0.122/sqlDaily.json?daily_date=' + choosen_date, myInit);
                 if (result.ok) feedback = await result.json();
 
+        //--- STEP #3: WAITS ESP32 to prepare JSON data (hold on while "Updating")
                 while (feedback[0][0] == "Updating...")
                 {
                     await delay(1000);
@@ -396,49 +426,106 @@
                     if (result.ok) feedback = await result.json();
                 }
 
+                var feedback_PV      = feedback[0].map((e,i) => [e,feedback[1][i]]);
+                var feedback_ACPower = feedback[0].map((e,i) => [e,feedback[2][i]]);
+                var feedback_batVolt = feedback[0].map((e,i) => [e,feedback[3][i]]);
+                var feedback_batChar = feedback[0].map((e,i) => [e,feedback[4][i]]);
+                var feedback_batDisC = feedback[0].map((e,i) => [e,feedback[5][i]]);
 
-                chart = new Highcharts.Chart({
-                    chart: {
-                        renderTo: 'chart-BatVoltage_DAY'
-                    },
-                    title: {
-                        text: 'Battery Volts by day'
-                    },
+        //--- STEP #4.1: BAT VOLTS: Update CHART with new data from ESP32                
+                bat_daily_chart = new Highcharts.Chart({
+                    chart: { renderTo: 'chart-BatVoltage_DAY' },
+                    title: { text: 'Battery Volts: Day view' },
                     plotOptions: {
-                        line: 
-                        { 
-                            animation: false,
-                            dataLabels: 
-                            { 
-                                enabled: false,
-                                style: 
-                                {
-                                    fontWeight: 'normal',
-                                } 
-                            }
-                        },
+                        line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
                         series: { color: '#059e8a', lineWidth: 2 } 
                     },
-                    xAxis: 
-                    {
-                        type: 'datetime',
-                        dateTimeLabelFormats: { second: '%H:%M:%S' }
+                    xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                    yAxis: {
+                        min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
+                        title: { text: 'Volts', margin: 10 }
                     },
-                    yAxis: 
-                    {
-                        title: {
-                            text: 'Volts',
-                            margin: 10
-                        }
-                    },
-                    series: [{
-                        type: 'line',
-                        name: 'Battery Volts',
-                        data: feedback
+                    series: [{ type: 'line', name: 'Battery Volts',
+                        data: feedback_batVolt
                     }]
                 } );
+
+                //--- STEP #4.2: PV Power: Update CHART with new data from ESP32                
+                PV_daily_chart = new Highcharts.Chart({
+                    chart: { renderTo: 'chart-PVPower_DAY' },
+                    title: { text: 'Generated Solar Power: Day view ' },
+                    plotOptions: {
+                        line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                        series: { color: '#059e8a', lineWidth: 2 } 
+                    },
+                    xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                    yAxis: {
+                        title: { text: 'Watts', margin: 10 }
+                    },
+                    series: [{ type: 'line', name: 'Watts',
+                        data: feedback_PV 
+                    }]
+                } );
+
+                //--- STEP #4.3: AC Power: Update CHART with new data from ESP32                
+                ACPower_daily_chart = new Highcharts.Chart({
+                    chart: { renderTo: 'chart-ActivePower_DAY' },
+                    title: { text: 'Active Power Consumption: Day view' },
+                    plotOptions: {
+                        line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                        series: { color: '#059e8a', lineWidth: 2 } 
+                    },
+                    xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                    yAxis: {
+                        title: { text: 'Watts', margin: 10 }
+                    },
+                    series: [{ type: 'line', name: 'Watts',
+                        data: feedback_ACPower 
+                    }]
+                } );
+
+                //--- STEP #4.4: Bat Charge: Update CHART with new data from ESP32                
+                bat_charg_daily_chart = new Highcharts.Chart({
+                    chart: { renderTo: 'chart-BatCharge_DAY' },
+                    title: { text: 'Battery Charging Current: Day view' },
+                    plotOptions: {
+                        line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                        series: { color: '#059e8a', lineWidth: 2 } 
+                    },
+                    xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                    yAxis: {
+                        title: { text: 'Ampers', margin: 10 }
+                    },
+                    series: [{ type: 'line', name: 'Ampers',
+                        data: feedback_batChar 
+                    }]
+                } );
+
+
+                //--- STEP #4.5: Bat disCharge: Update CHART with new data from ESP32                
+                bat_discharg_daily_chart = new Highcharts.Chart({
+                    chart: { renderTo: 'chart-BatDischarge_DAY' },
+                    title: { text: 'Battery Discharge Current: Day view' },
+                    plotOptions: {
+                        line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                        series: { color: '#059e8a', lineWidth: 2 } 
+                    },
+                    xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                    yAxis: {
+                        title: { text: 'Ampers', margin: 10 }
+                    },
+                    series: [{ type: 'line', name: 'Ampers',
+                        data: feedback_batDisC
+                    }]
+                } );
+
+
             } );
         });
+
+
+//--- END: UPDATES DAILY CHARTS -------------------------------------------------------------------------            
+
 
         /////////////////////////////////////////////////////////////////////
         ///// chart-BatCharge /////////////////////////////////////////////
