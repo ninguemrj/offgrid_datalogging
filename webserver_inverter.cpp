@@ -26,7 +26,15 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
       //--- Print ESP32 Local IP Address  ------------
       Serial.println(WiFi.localIP());
 
-  
+      //--- DDNS Service  ------------
+      EasyDDNS.service("freemyip");
+      EasyDDNS.client("casamagalhaes.freemyip.com", "827f49a93329949405531079"); // Enter your DDNS Domain & Token
+    
+      // Get Notified when your IP changes
+      EasyDDNS.onUpdate([&](const char* oldIP, const char* newIP){
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): EasyDDNS - IP Change Detected: " + String(newIP));        
+      });      
+
   _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   {
     request->send(SPIFFS, "/index.html");
@@ -92,7 +100,7 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   });
 
 
-  //--- PV 40 readings of acActivePower from SQL and parse as Json  -----------------
+  //--- PV 288 readings of acActivePower from SQL and parse as Json  -----------------
 
   _server.on("/sqlDaily.json", HTTP_GET, [_SQL_INV](AsyncWebServerRequest *request)
   {
@@ -118,26 +126,56 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
         if (_SQL_INV->daily_data_updated)
         {
           SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS: Daily data ready: preparing JSON");
-          //--- BEGIN: Prepare JSON string -------------------------------
-          response = "[";
-          bool _first = true;
-          for (int i=0; i<SQL_ARRAY_SIZE; i++)
-          {
-            if (_first)
-            {
-              response += String("[");
-              _first = false;
-            }
-            else
-            {
-              response += String(",[");
-            }
-            response += int64String((uint64_t)_SQL_INV->SQL_daily_QPIGS[i]._unixtime*1000)+String(",")+String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00))+String("]");
-          }
-          response += String("]");    
-          //--- END: Prepare JSON string -------------------------------
+    //--- BEGIN: Prepare JSON string -------------------------------
+          String response_time          = "[";
+          String response_PV            = "[";
+          String response_ACPower       = "[";
+          String response_BatV          = "[";
+          String response_Bat_charg     = "[";
+          String response_Bat_discharg  = "[";
           
-          Serial.println("time json: " + String(millis()-teste));
+          bool _first = true;
+          
+          for (int i=0; i<SQL_ARRAY_SIZE; i++) 
+          {
+              if (_first) 
+              {
+                _first = false;
+              }
+              else
+              { 
+                response_time         += ",";
+                response_PV           += ",";
+                response_ACPower      += ",";
+                response_BatV         += ",";
+                response_Bat_charg    += ",";
+                response_Bat_discharg += ",";
+              }
+              response_time         += int64String((uint64_t)(_SQL_INV->SQL_daily_QPIGS[i]._unixtime - __FUSO__)*1000);
+              response_PV           += String((_SQL_INV->SQL_daily_QPIGS[i].PV1_chargPower));
+              response_ACPower      += String((_SQL_INV->SQL_daily_QPIGS[i].acActivePower));
+              response_BatV         += String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00));
+              response_Bat_charg    += String((_SQL_INV->SQL_daily_QPIGS[i].batteryChargeCurrent));
+              response_Bat_discharg += String((_SQL_INV->SQL_daily_QPIGS[i].batteryDischargeCurrent));
+          }
+
+          response_time += "],";
+          response_PV += "],";
+          response_ACPower += "],";
+          response_BatV += "],";
+          response_Bat_charg += "],";
+          response_Bat_discharg += "]";
+
+          response = "[";
+          response += response_time;
+          response += response_PV;
+          response += response_ACPower;
+          response += response_BatV;
+          response += response_Bat_charg;
+          response += response_Bat_discharg;
+          response += "]";    
+    //--- END: Prepare JSON string -------------------------------
+            Serial.println("time json: " + String(millis()-teste));
         }
         else
         {
@@ -149,6 +187,30 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
     
     request->send(200, "application/json", response );
   });
+
+
+  //--- QPIRI information as Json  -----------------
+
+  _server.on("/QPIRI.json", HTTP_GET, [_inv](AsyncWebServerRequest *request)
+  {
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /QPIRI.json: preparing JSON");
+
+    //--- BEGIN: Prepare JSON string -------------------------------
+    String response = "";
+    response = "[";
+    response += String(_inv->QPIRI_values.BatteryUnderVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryBulkVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryFloatVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryReChargeVoltage/10.0);
+    response += "]";
+    //--- END: Prepare JSON string -------------------------------
+    
+    request->send(200, "application/json", response );
+  });
+
 
   
   //--- ACTIVE POWER from pipvals ---------------------
@@ -224,4 +286,10 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   //--- Start web server ------------
   _server.begin();
 
+}
+
+
+void WEBSERVER_INVERTER::runLoop()
+{
+  EasyDDNS.update(10000);
 }
