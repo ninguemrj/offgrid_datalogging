@@ -44,8 +44,28 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   {
     request->send(SPIFFS, "/index2.html");
   });
-
-    _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  
+  _server.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/bootstrap.min.css");
+  });
+  
+  _server.on("/bootstrap.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/bootstrap.min.js");
+  });
+  
+  _server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/jquery.min.js");
+  });
+  
+  _server.on("/popper.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/popper.min.js");
+  });
+  
+  _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   {
     request->send(SPIFFS, "/chart.html");
   });
