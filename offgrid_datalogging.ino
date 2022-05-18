@@ -1,5 +1,9 @@
 #include "config.h"
 
+#ifndef _SECRET_H
+  #include "_secret.h"
+#endif
+
 /////////////////////////////////
 // URGENT
 // DATE for SD filename not updated
@@ -91,8 +95,8 @@ struct tm timeinfo;
 
 
 //******* WIFI ************************************************
-    String ssid = "Ninguem_house";
-    String password = "a2a3a1982a";
+extern __wifi_SSID__;
+extern __wifi_pass__;
 
 
 //***** SERIAL3 on MEGA for Solar Inverter communication *****************************
@@ -141,7 +145,7 @@ void setup() {
 
 //***** 3) Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv, &SQL_inv);
+  WEB_inv.begin(__wifi_SSID__, __wifi_pass__, &inv, &SQL_inv); // WIFI info declared on "_secret.h", not available for security reasons
   Serial.println("**** WebServer Inverter: initialized !");
 
 
