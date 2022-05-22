@@ -13,10 +13,18 @@
   #include "PVinverter.h"
 #endif
 
+#ifndef SUPPORT_FUNCTIONS_H
+  #include "support_functions.h"
+#endif
+
+#include <Int64String.h>
 #include <WiFi.h>
+#include "HTTPClient.h"
+#include <EasyDDNS.h>
+
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
-#include <ArduinoJson.h>
+//#include <ArduinoJson.h>
 #include "SQLITE_inverter.h"
 #include "config.h"
 
@@ -27,7 +35,8 @@ class WEBSERVER_INVERTER
 
     WEBSERVER_INVERTER() {};
 
-    void begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40]);
+    void begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV);
+    void runLoop();
 
 
   private:

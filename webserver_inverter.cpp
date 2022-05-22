@@ -4,7 +4,7 @@
 extern String _errorDateTime();
 
 
-void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, PV_INVERTER::pipVals_t (*_SQL_QPIGS)[40])
+void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV)
 {
       //--- Initialize ESP SPIFFS (flash filesystem) to recover the index.html file --------
       if(!SPIFFS.begin()){
@@ -26,7 +26,15 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
       //--- Print ESP32 Local IP Address  ------------
       Serial.println(WiFi.localIP());
 
-  
+      //--- DDNS Service  ------------
+      EasyDDNS.service("freemyip");
+      EasyDDNS.client("casamagalhaes.freemyip.com", "827f49a93329949405531079"); // Enter your DDNS Domain & Token
+    
+      // Get Notified when your IP changes
+      EasyDDNS.onUpdate([&](const char* oldIP, const char* newIP){
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): EasyDDNS - IP Change Detected: " + String(newIP));        
+      });      
+
   _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   {
     request->send(SPIFFS, "/index.html");
@@ -36,8 +44,28 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   {
     request->send(SPIFFS, "/index2.html");
   });
-
-    _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  
+  _server.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/bootstrap.min.css");
+  });
+  
+  _server.on("/bootstrap.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/bootstrap.min.js");
+  });
+  
+  _server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/jquery.min.js");
+  });
+  
+  _server.on("/popper.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->send(SPIFFS, "/popper.min.js");
+  });
+  
+  _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   {
     request->send(SPIFFS, "/chart.html");
   });
@@ -58,17 +86,19 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
 
     if (_inv->QPIGS_values.DevStat_Chargingstatus == 1)
     {
-      if (_inv->QPIGS_values.ChargerSourcePriority == 2)
+      if (_inv->QPIRI_values.ChargerSourcePriority == 2)
       {
         _response = "sun_plug";
       }
       else
       {
-        if (_inv->QPIGS_values.ChargerSourcePriority == 3)
+        if (_inv->QPIRI_values.ChargerSourcePriority == 3)
         {
           _response = "sun";
         }
-        if (_inv->QPIGS_values.ChargerSourcePriority == 0)
+
+        
+        if (_inv->QPIRI_values.ChargerSourcePriority == 0)
         {
           _response = "plug";
         }
@@ -92,28 +122,117 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   });
 
 
-  //--- PV 40 readings of acActivePower from SQL and parse as Json  -----------------
+  //--- PV 288 readings of acActivePower from SQL and parse as Json  -----------------
 
-  _server.on("/PVPower.json", HTTP_GET, [_SQL_QPIGS](AsyncWebServerRequest *request)
+  _server.on("/sqlDaily.json", HTTP_GET, [_SQL_INV](AsyncWebServerRequest *request)
   {
     uint32_t teste = millis();
-    StaticJsonDocument<2600> doc;
-    JsonArray arr1 = doc.createNestedArray();
-    for (int i=0; i<40; i++)
-    {
-      arr1[0] = (uint64_t)(*_SQL_QPIGS)[i]._unixtime*1000;
-      arr1[1] = (*_SQL_QPIGS)[i].acActivePower;
-      doc.add(arr1);
-      
-      #if defined (ESP8266) || (defined ESP32)
+    String _daily_date = "";
+    String response = "";
+    
+    if (request->hasParam("daily_date")) {
+    // New date informed as argument ==> Defines new daily date to fetch data from SQL DB (background)
+
+        _daily_date = request->getParam("daily_date")->value();
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: HTTP-GET Paramenter: " + _daily_date);          // 0 = INFO msg
+
+        // Defines new daily date to fetch data from SQL DB (background)
+        _SQL_INV->set_dailyDate(strtoul(_daily_date.c_str(), NULL, 0));
+
+        response = "[[\"Updating...\"]]"; //keeping JSON format
+    } else {
+
+    // NO ARGUMENTS ==> Return current DAILY_QPIGS DATA
+
         yield();
-      #endif 
-    } 
-    Serial.println("time json: " + String(millis()-teste));
-    String response;
-    serializeJson(doc, response);
+        if (_SQL_INV->daily_data_updated)
+        {
+          SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS: Daily data ready: preparing JSON");
+    //--- BEGIN: Prepare JSON string -------------------------------
+          String response_time          = "[";
+          String response_PV            = "[";
+          String response_ACPower       = "[";
+          String response_BatV          = "[";
+          String response_Bat_charg     = "[";
+          String response_Bat_discharg  = "[";
+          
+          bool _first = true;
+          
+          for (int i=0; i<SQL_ARRAY_SIZE; i++) 
+          {
+              if (_first) 
+              {
+                _first = false;
+              }
+              else
+              { 
+                response_time         += ",";
+                response_PV           += ",";
+                response_ACPower      += ",";
+                response_BatV         += ",";
+                response_Bat_charg    += ",";
+                response_Bat_discharg += ",";
+              }
+              response_time         += int64String((uint64_t)(_SQL_INV->SQL_daily_QPIGS[i]._unixtime)*1000);
+              response_PV           += String((_SQL_INV->SQL_daily_QPIGS[i].PV1_chargPower));
+              response_ACPower      += String((_SQL_INV->SQL_daily_QPIGS[i].acActivePower));
+              response_BatV         += String((_SQL_INV->SQL_daily_QPIGS[i].batteryVoltage/100.00));
+              response_Bat_charg    += String((_SQL_INV->SQL_daily_QPIGS[i].batteryChargeCurrent));
+              response_Bat_discharg += String((_SQL_INV->SQL_daily_QPIGS[i].batteryDischargeCurrent));
+          }
+
+          response_time += "],";
+          response_PV += "],";
+          response_ACPower += "],";
+          response_BatV += "],";
+          response_Bat_charg += "],";
+          response_Bat_discharg += "]";
+
+          response = "[";
+          response += response_time;
+          response += response_PV;
+          response += response_ACPower;
+          response += response_BatV;
+          response += response_Bat_charg;
+          response += response_Bat_discharg;
+          response += "]";    
+    //--- END: Prepare JSON string -------------------------------
+            Serial.println("time json: " + String(millis()-teste));
+        }
+        else
+        {
+          SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /sqlDaily.json: WITHOUT PARAMETERS: Daily data Updating yet...");
+          response = "[[\"Updating...\"]]";
+          delay(100);
+        }
+    }
+    
     request->send(200, "application/json", response );
   });
+
+
+  //--- QPIRI information as Json  -----------------
+
+  _server.on("/QPIRI.json", HTTP_GET, [_inv](AsyncWebServerRequest *request)
+  {
+        SUPPORT_FUNCTIONS::logMsg(0, "WEBSERVER_INVERTER::begin(): /QPIRI.json: preparing JSON");
+
+    //--- BEGIN: Prepare JSON string -------------------------------
+    String response = "";
+    response = "[";
+    response += String(_inv->QPIRI_values.BatteryUnderVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryBulkVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryFloatVoltage/10.0);
+    response += ",";
+    response += String(_inv->QPIRI_values.BatteryReChargeVoltage/10.0);
+    response += "]";
+    //--- END: Prepare JSON string -------------------------------
+    
+    request->send(200, "application/json", response );
+  });
+
 
   
   //--- ACTIVE POWER from pipvals ---------------------
@@ -189,4 +308,10 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
   //--- Start web server ------------
   _server.begin();
 
+}
+
+
+void WEBSERVER_INVERTER::runLoop()
+{
+  EasyDDNS.update(10000);
 }

@@ -1,8 +1,11 @@
 #include "config.h"
 
+#ifndef _SECRET_H
+  #include "_secret.h"
+#endif
+
 /////////////////////////////////
 // URGENT
-// DATE for SD filename not updated
 // SD writing on loop without time delay
 /////////////////////////////////////
 /*
@@ -82,7 +85,7 @@ const char* ntpServer1 = "pool.ntp.org";
 const char* ntpServer2 = "time.nist.gov";
 const long  gmtOffset_sec = -3*3600;
 const int   daylightOffset_sec = 0*3600;
-time_t now;
+time_t _now;
 struct tm timeinfo;
 
 
@@ -91,11 +94,10 @@ struct tm timeinfo;
 
 
 //******* WIFI ************************************************
-    String ssid = "Ninguem_house";
-    String password = "a2a3a1982a";
+extern String __wifi_SSID__;
+extern String __wifi_pass__;
 
 
-//***** SERIAL3 on MEGA for Solar Inverter communication *****************************
 //***** SERIAL2 on ESP32 for Solar Inverter communication ****************************
 // Change this argument to the SERIAL actualy used to communicates with the inverter
 PV_INVERTER inv(Serial2);
@@ -124,48 +126,69 @@ String _errorDateTime()
 ////// Setup ///////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  Serial.begin(115200); // Can change it to 115200, if you want use debugIsr* macros
+  Serial.begin(115200); 
   delay(500); // Wait a time
   Serial.println(); // To not stay in end of dirty chars in boot
   Serial.println("**** Setup: initializing ...");
+    SUPPORT_FUNCTIONS::logMsg(3, "getMinFreeHeap(): " + String(ESP.getMinFreeHeap()) + "| getMaxAllocHeap(): " + String(ESP.getMaxAllocHeap()) + "|  getHeapSize(): " + String(ESP.getHeapSize())  + "|  getFreeHeap(): " + String(ESP.getFreeHeap()));
 
-
-//***** PVINVERTER ***************************************************
+//***** 1) PVINVERTER ***************************************************
   // Start inverter class defining serial speed, amount of fields on QPIGS and the #define VERBOSE_MODE
   inv.begin(2400, 2, VERBOSE_MODE);  // "A" = 18 fields from QPIGS / "B" = 22 fields from QPIGS / "C" 22 fields from QPIGS AND QET
+  Serial.println("**** PV Inverter: initialized ...");
 
+//***** 2) Prepare SQLITE_inverter to store data on SD CARD **********
+  SQL_inv.begin();
+  Serial.println("**** SQL Inverter: initialized !");
 
-
-
-//***** Prepare NTC Time client **************************************
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
-
-//***** Prepare SQLITE_inverter to store data on SD CARD **********
-  SQL_inv.begin(VERBOSE_MODE);
-
-//***** Prepare WEBSERVER for LIVE data ******************************
+//***** 3) Prepare WEBSERVER for LIVE data ******************************
 // Default web server port = 80
-  WEB_inv.begin(ssid, password, &inv, &SQL_inv.SQL_QPIGS);
+  WEB_inv.begin(__wifi_SSID__, __wifi_pass__, &inv, &SQL_inv); // WIFI info declared on "_secret.h", not available for security reasons
+  Serial.println("**** WebServer Inverter: initialized !");
+
+
+//***** 4) Prepare NTC Time client **************************************
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_setservername(0, ntpServer1);
+  sntp_init();
+  
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+  Serial.print("Obtaing date/time from internet, wait..");
+  while (!getLocalTime(&timeinfo)) Serial.print(".");
+  
+  Serial.println(" ok!");
+  Serial.println("**** NTP: Synced !");
+
+
+  // IT SHOULD BE ON SQL BEGIN, but no TODAY (NTP) in that point yet)
+  SQL_inv.set_dailyDate(1651795200);  // Defines the first date to calculate SQL_DAILY_QPIGS when starting up ESP32
+                                      // PENDING: Replace by TODAY
+
 
 
 //***** SETUP END
-  Serial.println("**** Setup: initialized.");
+  Serial.println("**** Setup: Concluded!");
 }
 
 ////// Loop /////////////////////////////////////////////////////////////
 
 void loop()
 {
+  
+  SQL_inv.runLoop();
+  WEB_inv.runLoop();
+
+  
   int returned_code = 0;
   // ----------- UPDATE Current DATE/TIME on Loop ---------------------------------
   if (!getLocalTime(&timeinfo)) Serial.println(_errorDateTime() + "-- ERROR: TIME: Failed to obtain time.");
 
   //ESP32 RTC time 
   //TODO: Syncronize them each hour
-  time(&now);
+  time(&_now);
   
   //--------- Request QPIGS and QPIRI data from inverter  --------------
-  returned_code = inv.ask_data(now, true);
+  returned_code = inv.ask_data(_now, true);
   if (returned_code != 0)                 
   {
     Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'ask_data' function! Erro code:" + String(returned_code));        
@@ -185,8 +208,6 @@ void loop()
       Serial.println(_errorDateTime() + "-- ERROR: MAIN: Error executing 'sdStoreQPIGS' function!");        
     }
 
-    // Updates latest 40 QPIGS array from SQLite
-    SQL_inv.ask_latest_SQL_QPIGS();
 
     // Updated "previous_reading_unixtime" to avoid storing the same data twice
     previous_reading_unixtime = inv.QPIGS_average._unixtime;
