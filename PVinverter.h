@@ -110,7 +110,14 @@ class PV_INVERTER
       unsigned long int PV1_chargPower; // PV1 Charging power (5 numbers)
       uint8_t DevStat_chargingFloatMode;// 10: flag for charging to floating mode
       uint8_t DevStat_SwitchOn;         // b9: Switch On
-      uint8_t DevStat_dustProof;        // b8: flag for dustproof installed(1-dustproof installed,0-no dustproof      
+      uint8_t DevStat_dustProof;        // b8: flag for dustproof installed(1-dustproof installed,0-no dustproof
+      uint32_t bat_backToUtilityVolts;  // Setup voltage to stop using battery and back to GRID power
+      uint32_t bat_bulkChargeVolts;     // Setup voltage to 1st (elevation) and 2nd (Absorption) battery charge stages
+      uint32_t bat_FloatChargeVolts;    // Setup voltage to 3rd (Floating) battery charge stage
+      uint32_t bat_CutOffVolts;         // Minimum Limit voltage to discharge the Battery (used for % available battery calculation)
+      uint8_t OutPutPriority;           // 0: Utility first / 1: Solar first / 2: SBU first
+      uint8_t ChargerSourcePriority;    // 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar charging permitted
+      
     } QPIGS_values;
 
   struct QPIRIvals_t  // Device Rating Information inquiry

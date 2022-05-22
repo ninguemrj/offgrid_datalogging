@@ -97,6 +97,12 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
   {
     //--- QPIRI without data, skip this reading and wait next one ----------------- 
     this->clear_QPIRI(); 
+    QPIGS_values.bat_backToUtilityVolts = 0;
+    QPIGS_values.bat_bulkChargeVolts    = 0;
+    QPIGS_values.bat_FloatChargeVolts   = 0;
+    QPIGS_values.bat_CutOffVolts        = 0;
+    QPIGS_values.OutPutPriority         = 0;
+    QPIGS_values.ChargerSourcePriority  = 0;  
   }
   else
   {
@@ -135,16 +141,20 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
     this->QPIRI_values.BatteryRatingVoltage  = atof(val) * 10 ;
 
     val = strtok(0, " ");                                    // K = xx.x V * 10 (battery re-charge or backToUtilityVolts)
-    this->QPIRI_values.BatteryReChargeVoltage = atof(val) * 10 ; 
+    QPIGS_values.bat_backToUtilityVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryReChargeVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // L = xx.x V * 10 bat_CutOffVolts
-    this->QPIRI_values.BatteryUnderVoltage = atof(val) * 10; 
+    QPIGS_values.bat_CutOffVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryUnderVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // M = xx.x V * 10 bat_bulkChargeVolts
-    this->QPIRI_values.BatteryBulkVoltage = atof(val) * 10 ; 
+    QPIGS_values.bat_bulkChargeVolts = atof(val) * 10 ;
+    this->QPIRI_values.BatteryBulkVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // N = xx.x V * 10 bat_FloatChargeVolts
-    this->QPIRI_values.BatteryFloatVoltage = atof(val) * 10; 
+    QPIGS_values.bat_FloatChargeVolts = atof(val) * 10 ;  
+    this->QPIRI_values.BatteryFloatVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // O = 0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic
     this->QPIRI_values.BatteryType = atoi(val);                    
@@ -159,10 +169,12 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
     this->QPIRI_values.InputVoltageRange = atoi(val);     
     
     val = strtok(0, " ");                                    // P = 0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility -> OutPutPriority 
-    this->QPIRI_values.OutputSourcePriority  = atoi(val);
+    QPIGS_values.OutPutPriority  = atoi(val);
+    this->QPIRI_values.OutputSourcePriority  = atoi(val);    // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // Q = 0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 ) -> ChargerSourcePriority
-    this->QPIRI_values.ChargerSourcePriority  = atoi(val);
+    QPIGS_values.ChargerSourcePriority  = atoi(val);   
+    this->QPIRI_values.ChargerSourcePriority  = atoi(val);   // doubled to not beak legancy code using QPIGS_Values (need to be removed)  
 
    // ignore the other QPIRI fields for while
   }
@@ -542,7 +554,17 @@ String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
     "DevStat_SwitchOn:......... " + String(_thisPIP.DevStat_SwitchOn)+ "\n\r"          +
     "DevStat_dustProof:........ " + String(_thisPIP.DevStat_dustProof)+ "\n\r";
   }
-  return _response;
+  
+  // QPIRI values: TODO: Move to a different function
+  _response += 
+  String("Bat Back to Grid:......... ") + String(_thisPIP.bat_backToUtilityVolts/10.0) + " V\n\r"   + 
+  "Bat Bulk Charge:.......... " + String(_thisPIP.bat_bulkChargeVolts/10.0) + " V\n\r"              + 
+  "Bat Float Charge:......... " + String(_thisPIP.bat_FloatChargeVolts/10.0) + " V\n\r"             + 
+  "Bat CutOff:............... " + String(_thisPIP.bat_CutOffVolts/10.0) + " V\n\r"                  + 
+  "Output Priority:.......... " + String(_thisPIP.OutPutPriority) + " | 0: Utility first / 1: Solar first / 2: SBU first\n\r"   + 
+  "Charging Priority:........ " + String(_thisPIP.ChargerSourcePriority) + " | 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar\n\r";
+
+   return _response;
 }
 
 
