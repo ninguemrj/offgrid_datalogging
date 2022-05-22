@@ -94,8 +94,8 @@ struct tm timeinfo;
 
 
 //******* WIFI ************************************************
-extern const char* __wifi_SSID__;
-extern const char* __wifi_pass__;
+extern String __wifi_SSID__;
+extern String __wifi_pass__;
 
 
 //***** SERIAL2 on ESP32 for Solar Inverter communication ****************************
