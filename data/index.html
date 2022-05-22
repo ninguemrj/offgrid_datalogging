@@ -181,7 +181,7 @@
             return new Promise(resolve => setTimeout(resolve, time));
         }
 
-        let _min_volts; // stores the minimum voltage (CUTOFF) set in inverter for limiting battery voltage chart scales
+        var _min_volts; // stores the minimum voltage (CUTOFF) set in inverter for limiting battery voltage chart scales
         let _bulk_volts; // stores the bulk charge voltage set in inverter
         let _float_volts; // stores the minimumfloat charge voltage set in inverter 
         let _back_to_grid_volts; // stores the back to grid voltage set in inverter
@@ -211,6 +211,15 @@
                 _bulk_volts = QPIRI_array[1];
                 _float_volts = QPIRI_array[2];
                 _back_to_grid_volts = QPIRI_array[3];
+                
+                var dd = new Date();
+
+                let time = dd.getTime();
+                console.log("QPIRI time:");
+                console.log(time);
+                console.log("_min_volts:");
+                console.log(_min_volts);
+
             }
 
         });
@@ -269,203 +278,221 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Creates GLOBAL var for each chart //////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+var chart_live_PVPower;
+var chart_live_ACPower;
+var chart_live_BatVolt;
+var chart_live_batcharge;
+var chart_live_batdischarge;
+var chart_daily_PVPower;
+var chart_daily_ACPower;
+var chart_daily_BatVolt;
+var chart_daily_batCharg;
+var char_daily_batDischarg;
 
-        var chart_live_PVPower = new Highcharts.Chart({
-            chart:{ renderTo : 'chart-PVPower' },
-            title: { text: 'Generated Solar Power' },
-            series: [{
-                showInLegend: false,
-                data: []
-            }],
-            plotOptions: {
-                line: { animation: true,
-                dataLabels: { enabled: true }
-                },
-                series: { color: '#059e8a', lineWidth: 3 } 
-            },
-            xAxis: { type: 'datetime',
-                dateTimeLabelFormats: { second: '%H:%M:%S' }
-            },
-            yAxis: {
-                title: { text: 'Watts (W)' }
-            },
-            credits: { enabled: false }
-            });
-        var chart_live_ACPower = new Highcharts.Chart({
-            chart:{ renderTo:'chart-ActivePower' },
-            title: { text: 'Active Power Consumption' },
-            series: [{
-                showInLegend: false,
-                data: []
-            }],
-            plotOptions: {
-                line: { animation: false,
-                dataLabels: { enabled: true }
-                }
-            },
-            xAxis: {
-                type: 'datetime',
-                dateTimeLabelFormats: { second: '%H:%M:%S' }
-            },
-            yAxis: {
-                title: { text: 'Load (Watts)' }
-            },
-            credits: { enabled: false }
-            });
-        var chart_live_BatVolt = new Highcharts.Chart({
-            chart:{ renderTo:'chart-BatVoltage' },
-            title: { text: 'Battery Bank Voltage' },
-            series: [{
-                showInLegend: false,
-                data: []
-            }],
-            plotOptions: {
-                line: { animation: false,
-                dataLabels: { enabled: true }
-                },
-                series: { color: '#18009c', lineWidth: 3}
-            },
-            xAxis: {
-                type: 'datetime',
-                dateTimeLabelFormats: { second: '%H:%M:%S' }
-            },
-            yAxis: {
-                min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
-                title: { text: 'Voltage (V)' }
-            },
-            credits: { enabled: false }
-            });
-        var chart_live_batcharge = new Highcharts.Chart({
-            chart:{ renderTo:'chart-BatCharge' },
-            title: { text: 'Battery Charging Current' },
-            series: [{
-                showInLegend: false,
-                data: []
-            }],
-            plotOptions: {
-                line: { animation: false,
-                dataLabels: { enabled: true }
-                },
-                series: { color: '#18009c', lineWidth: 3 }
-            },
-            xAxis: {
-                type: 'datetime',
-                dateTimeLabelFormats: { second: '%H:%M:%S' }
-            },
-            yAxis: {
-                title: { text: 'Current (A)' }
-            },
-            credits: { enabled: false }
-            });
-        var chart_live_batdischarge = new Highcharts.Chart({
-            chart:{ renderTo:'chart-BatDischarge' },
-            title: { text: 'Battery Discharge Current' },
-            series: [{
-                showInLegend: false,
-                data: []
-            }],
-            plotOptions: {
-                line: { animation: false,
-                dataLabels: { enabled: true }
-                },
-                series: { color: '#18009c', lineWidth: 3 }
-            },
-            xAxis: {
-                type: 'datetime',
-                dateTimeLabelFormats: { second: '%H:%M:%S' }
-            },
-            yAxis: {
-                title: { text: 'Current (A)' }
-            },
-            credits: { enabled: false }
-            });
 
-        var chart_daily_PVPower = new Highcharts.Chart({
-            chart: { renderTo: 'chart-PVPower_DAY' },
-            title: { text: 'Generated Solar Power: Day view ' },
-            plotOptions: {
-                line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
-                series: { color: '#059e8a', lineWidth: 2 } 
-            },
-            xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
-            yAxis: {
-                title: { text: 'Watts', margin: 10 }
-            },
-            time: { timezoneOffset: _timezone },
-            series: [{ type: 'line', name: 'Watts',
-                data: []
-            }]
-        } );
-        var chart_daily_ACPower = new Highcharts.Chart({
-            chart: { renderTo: 'chart-ActivePower_DAY' },
-            title: { text: 'Active Power Consumption: Day view' },
-            plotOptions: {
-                line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
-                series: { color: '#059e8a', lineWidth: 2 } 
-            },
-            xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
-            yAxis: {
-                title: { text: 'Watts', margin: 10 }
-            },
-            time: { timezoneOffset: _timezone },
-            series: [{ type: 'line', name: 'Watts',
-                data: [] 
-            }]
-        } );
-        var chart_daily_BatVolt = new Highcharts.Chart({
-            chart: { renderTo: 'chart-BatVoltage_DAY' },
-            title: { text: 'Battery Volts: Day view' },
-            plotOptions: {
-                line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
-                series: { color: '#059e8a', lineWidth: 2 } 
-            },
-            xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
-            yAxis: {
-                min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
-                title: { text: 'Volts', margin: 10 }
-            },
-            time: { timezoneOffset: _timezone },
-            series: [{ type: 'line', name: 'Battery Volts',
-                data: []
-            }]
-        } );
-        var chart_daily_batCharg = new Highcharts.Chart({
-            chart: { renderTo: 'chart-BatCharge_DAY' },
-            title: { text: 'Battery Charging Current: Day view' },
-            plotOptions: {
-                line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
-                series: { color: '#059e8a', lineWidth: 2 } 
-            },
-            xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
-            yAxis: {
-                title: { text: 'Ampers', margin: 10 }
-            },
-            time: { timezoneOffset: _timezone },
-            series: [{ type: 'line', name: 'Ampers',
-                data: [] 
-            }]
-        } );
-        var char_daily_batDischarg = new Highcharts.Chart({
-            chart: { renderTo: 'chart-BatDischarge_DAY' },
-            title: { text: 'Battery Discharge Current: Day view' },
-            plotOptions: {
-                line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
-                series: { color: '#059e8a', lineWidth: 2 } 
-            },
-            xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
-            yAxis: {
-                title: { text: 'Ampers', margin: 10 }
-            },
-            time: { timezoneOffset: _timezone },
-            series: [{ type: 'line', name: 'Ampers',
-                data: []
-            }]
-        } );
 
         
         
         // RUNS AFTER LOADING HTML, CSS AND IMAGES
         window.addEventListener('load', async function () {
+            var d = new Date();
+            let time = d.getTime();
+            console.log("ON Load time:");
+            console.log(time);
+            console.log("_min_volts:");
+            console.log(_min_volts);
+
+            chart_live_PVPower = new Highcharts.Chart({
+                chart:{ renderTo : 'chart-PVPower' },
+                title: { text: 'Generated Solar Power' },
+                series: [{
+                    showInLegend: false,
+                    data: []
+                }],
+                plotOptions: {
+                    line: { animation: true,
+                    dataLabels: { enabled: true }
+                    },
+                    series: { color: '#059e8a', lineWidth: 3 } 
+                },
+                xAxis: { type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: {
+                    title: { text: 'Watts (W)' }
+                },
+                credits: { enabled: false }
+                });
+            chart_live_ACPower = new Highcharts.Chart({
+                chart:{ renderTo:'chart-ActivePower' },
+                title: { text: 'Active Power Consumption' },
+                series: [{
+                    showInLegend: false,
+                    data: []
+                }],
+                plotOptions: {
+                    line: { animation: false,
+                    dataLabels: { enabled: true }
+                    }
+                },
+                xAxis: {
+                    type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: {
+                    title: { text: 'Load (Watts)' }
+                },
+                credits: { enabled: false }
+                });
+            chart_live_BatVolt = new Highcharts.Chart({
+                chart:{ renderTo:'chart-BatVoltage' },
+                title: { text: 'Battery Bank Voltage' },
+                series: [{
+                    showInLegend: false,
+                    data: []
+                }],
+                plotOptions: {
+                    line: { animation: false,
+                    dataLabels: { enabled: true }
+                    },
+                    series: { color: '#18009c', lineWidth: 3}
+                },
+                xAxis: {
+                    type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: {
+                    min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
+                    title: { text: 'Voltage (V)' }
+                },
+                credits: { enabled: false }
+                });
+            chart_live_batcharge = new Highcharts.Chart({
+                chart:{ renderTo:'chart-BatCharge' },
+                title: { text: 'Battery Charging Current' },
+                series: [{
+                    showInLegend: false,
+                    data: []
+                }],
+                plotOptions: {
+                    line: { animation: false,
+                    dataLabels: { enabled: true }
+                    },
+                    series: { color: '#18009c', lineWidth: 3 }
+                },
+                xAxis: {
+                    type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: {
+                    title: { text: 'Current (A)' }
+                },
+                credits: { enabled: false }
+                });
+            chart_live_batdischarge = new Highcharts.Chart({
+                chart:{ renderTo:'chart-BatDischarge' },
+                title: { text: 'Battery Discharge Current' },
+                series: [{
+                    showInLegend: false,
+                    data: []
+                }],
+                plotOptions: {
+                    line: { animation: false,
+                    dataLabels: { enabled: true }
+                    },
+                    series: { color: '#18009c', lineWidth: 3 }
+                },
+                xAxis: {
+                    type: 'datetime',
+                    dateTimeLabelFormats: { second: '%H:%M:%S' }
+                },
+                yAxis: {
+                    title: { text: 'Current (A)' }
+                },
+                credits: { enabled: false }
+                });
+
+            chart_daily_PVPower = new Highcharts.Chart({
+                chart: { renderTo: 'chart-PVPower_DAY' },
+                title: { text: 'Generated Solar Power: Day view ' },
+                plotOptions: {
+                    line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                yAxis: {
+                    title: { text: 'Watts', margin: 10 }
+                },
+                time: { timezoneOffset: _timezone },
+                series: [{ type: 'line', name: 'Watts',
+                    data: []
+                }]
+            } );
+            chart_daily_ACPower = new Highcharts.Chart({
+                chart: { renderTo: 'chart-ActivePower_DAY' },
+                title: { text: 'Active Power Consumption: Day view' },
+                plotOptions: {
+                    line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                yAxis: {
+                    title: { text: 'Watts', margin: 10 }
+                },
+                time: { timezoneOffset: _timezone },
+                series: [{ type: 'line', name: 'Watts',
+                    data: [] 
+                }]
+            } );
+            chart_daily_BatVolt = new Highcharts.Chart({
+                chart: { renderTo: 'chart-BatVoltage_DAY' },
+                title: { text: 'Battery Volts: Day view' },
+                plotOptions: {
+                    line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                yAxis: {
+                    min: _min_volts,     /// Minimal battery voltage on chart (CUT-OFF), to avoid missing readings change the minimum Y scale to zero
+                    title: { text: 'Volts', margin: 10 }
+                },
+                time: { timezoneOffset: _timezone },
+                series: [{ type: 'line', name: 'Battery Volts',
+                    data: []
+                }]
+            } );
+            chart_daily_batCharg = new Highcharts.Chart({
+                chart: { renderTo: 'chart-BatCharge_DAY' },
+                title: { text: 'Battery Charging Current: Day view' },
+                plotOptions: {
+                    line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                yAxis: {
+                    title: { text: 'Ampers', margin: 10 }
+                },
+                time: { timezoneOffset: _timezone },
+                series: [{ type: 'line', name: 'Ampers',
+                    data: [] 
+                }]
+            } );
+            char_daily_batDischarg = new Highcharts.Chart({
+                chart: { renderTo: 'chart-BatDischarge_DAY' },
+                title: { text: 'Battery Discharge Current: Day view' },
+                plotOptions: {
+                    line: { animation: false, dataLabels: { enabled: false, style: { fontWeight: 'normal' }}},
+                    series: { color: '#059e8a', lineWidth: 2 } 
+                },
+                xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+                yAxis: {
+                    title: { text: 'Ampers', margin: 10 }
+                },
+                time: { timezoneOffset: _timezone },
+                series: [{ type: 'line', name: 'Ampers',
+                    data: []
+                }]
+            } );
 
 //---------------------------------------------------------------------------------------------------------
 //--- BEGIN: LIVE CHARTS -------------------------------------------------------------------------            
@@ -636,14 +663,14 @@
                 const choosen_date = date.getTime() / 1000; //millis to seconds                
                 
         //--- STEP #2: Send new date to ESP32
-                const result = await fetch('http://192.168.0.122/sqlDaily.json?daily_date=' + choosen_date, myInit);
+                const result = await fetch('/sqlDaily.json?daily_date=' + choosen_date, myInit);
                 if (result.ok) feedback = await result.json();
 
         //--- STEP #3: WAITS ESP32 to prepare JSON data (hold on while "Updating")
                 while (feedback[0][0] == "Updating...")
                 {
                     await delay(1000);
-                    const result = await fetch('http://192.168.0.122/sqlDaily.json', myInit);
+                    const result = await fetch('/sqlDaily.json', myInit);
                     if (result.ok) feedback = await result.json();
                 }
 
