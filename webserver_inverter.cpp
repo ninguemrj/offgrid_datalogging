@@ -4,7 +4,7 @@
 extern String _errorDateTime();
 
 
-void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV)
+void WEBSERVER_INVERTER::begin(const char* _ssid, const char* _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV)
 {
       //--- Initialize ESP SPIFFS (flash filesystem) to recover the index.html file --------
       if(!SPIFFS.begin()){
@@ -12,7 +12,9 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
         return;
       }
       //--- Connect to Wi-Fi ---------------------
-      WiFi.begin(_ssid.c_str(), _password.c_str());
+        SUPPORT_FUNCTIONS::logMsg(3, _ssid);        
+        SUPPORT_FUNCTIONS::logMsg(3, _password);        
+      WiFi.begin(_ssid, _password);
       DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), F("*"));
       DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("content-type"));
       Serial.print("Connecting to WiFi.");
