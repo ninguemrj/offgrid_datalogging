@@ -86,17 +86,19 @@ void WEBSERVER_INVERTER::begin(String _ssid, String _password, PV_INVERTER *_inv
 
     if (_inv->QPIGS_values.DevStat_Chargingstatus == 1)
     {
-      if (_inv->QPIGS_values.ChargerSourcePriority == 2)
+      if (_inv->QPIRI_values.ChargerSourcePriority == 2)
       {
         _response = "sun_plug";
       }
       else
       {
-        if (_inv->QPIGS_values.ChargerSourcePriority == 3)
+        if (_inv->QPIRI_values.ChargerSourcePriority == 3)
         {
           _response = "sun";
         }
-        if (_inv->QPIGS_values.ChargerSourcePriority == 0)
+
+        
+        if (_inv->QPIRI_values.ChargerSourcePriority == 0)
         {
           _response = "plug";
         }
