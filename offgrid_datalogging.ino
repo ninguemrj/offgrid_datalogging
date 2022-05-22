@@ -6,7 +6,6 @@
 
 /////////////////////////////////
 // URGENT
-// DATE for SD filename not updated
 // SD writing on loop without time delay
 /////////////////////////////////////
 /*
@@ -95,11 +94,10 @@ struct tm timeinfo;
 
 
 //******* WIFI ************************************************
-extern __wifi_SSID__;
-extern __wifi_pass__;
+extern String __wifi_SSID__;
+extern String __wifi_pass__;
 
 
-//***** SERIAL3 on MEGA for Solar Inverter communication *****************************
 //***** SERIAL2 on ESP32 for Solar Inverter communication ****************************
 // Change this argument to the SERIAL actualy used to communicates with the inverter
 PV_INVERTER inv(Serial2);
