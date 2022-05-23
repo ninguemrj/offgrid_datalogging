@@ -97,12 +97,6 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
   {
     //--- QPIRI without data, skip this reading and wait next one ----------------- 
     this->clear_QPIRI(); 
-    QPIGS_values.bat_backToUtilityVolts = 0;
-    QPIGS_values.bat_bulkChargeVolts    = 0;
-    QPIGS_values.bat_FloatChargeVolts   = 0;
-    QPIGS_values.bat_CutOffVolts        = 0;
-    QPIGS_values.OutPutPriority         = 0;
-    QPIGS_values.ChargerSourcePriority  = 0;  
   }
   else
   {
@@ -141,19 +135,15 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
     this->QPIRI_values.BatteryRatingVoltage  = atof(val) * 10 ;
 
     val = strtok(0, " ");                                    // K = xx.x V * 10 (battery re-charge or backToUtilityVolts)
-    QPIGS_values.bat_backToUtilityVolts = atof(val) * 10 ;
     this->QPIRI_values.BatteryReChargeVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // L = xx.x V * 10 bat_CutOffVolts
-    QPIGS_values.bat_CutOffVolts = atof(val) * 10 ;
     this->QPIRI_values.BatteryUnderVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // M = xx.x V * 10 bat_bulkChargeVolts
-    QPIGS_values.bat_bulkChargeVolts = atof(val) * 10 ;
     this->QPIRI_values.BatteryBulkVoltage = atof(val) * 10 ; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // N = xx.x V * 10 bat_FloatChargeVolts
-    QPIGS_values.bat_FloatChargeVolts = atof(val) * 10 ;  
     this->QPIRI_values.BatteryFloatVoltage = atof(val) * 10; // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // O = 0: AGM 1: Flooded 2: User 3: Pylon 5: Weco 6: Soltaro 8: Lib 9: Lic
@@ -169,11 +159,9 @@ void PV_INVERTER::store_QPIRI(String _value, uint32_t _now)
     this->QPIRI_values.InputVoltageRange = atoi(val);     
     
     val = strtok(0, " ");                                    // P = 0: UtilitySolarBat 1: SolarUtilityBat 2: SolarBatUtility -> OutPutPriority 
-    QPIGS_values.OutPutPriority  = atoi(val);
     this->QPIRI_values.OutputSourcePriority  = atoi(val);    // doubled to not beak legancy code using QPIGS_Values (need to be removed)
     
     val = strtok(0, " ");                                    // Q = 0: Utility first 1: Solar first 2: Solar + Utility 3: Only solar charging permitted ( protocol 2 1-3 ) -> ChargerSourcePriority
-    QPIGS_values.ChargerSourcePriority  = atoi(val);   
     this->QPIRI_values.ChargerSourcePriority  = atoi(val);   // doubled to not beak legancy code using QPIGS_Values (need to be removed)  
 
    // ignore the other QPIRI fields for while
@@ -554,16 +542,6 @@ String PV_INVERTER::debug_QPIGS(pipVals_t _thisPIP)
     "DevStat_SwitchOn:......... " + String(_thisPIP.DevStat_SwitchOn)+ "\n\r"          +
     "DevStat_dustProof:........ " + String(_thisPIP.DevStat_dustProof)+ "\n\r";
   }
-  
-  // QPIRI values: TODO: Move to a different function
-  _response += 
-  String("Bat Back to Grid:......... ") + String(_thisPIP.bat_backToUtilityVolts/10.0) + " V\n\r"   + 
-  "Bat Bulk Charge:.......... " + String(_thisPIP.bat_bulkChargeVolts/10.0) + " V\n\r"              + 
-  "Bat Float Charge:......... " + String(_thisPIP.bat_FloatChargeVolts/10.0) + " V\n\r"             + 
-  "Bat CutOff:............... " + String(_thisPIP.bat_CutOffVolts/10.0) + " V\n\r"                  + 
-  "Output Priority:.......... " + String(_thisPIP.OutPutPriority) + " | 0: Utility first / 1: Solar first / 2: SBU first\n\r"   + 
-  "Charging Priority:........ " + String(_thisPIP.ChargerSourcePriority) + " | 0: Utility first / 1: Solar first / 2: Solar + Utility / 3: Only solar\n\r";
-
    return _response;
 }
 
@@ -710,13 +688,16 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
           _result = "";                                 // clear the string result from PV_INVERTER as it is not complete
           _funct_return = 1;                            // short string lengh for QPIGS command 
         }
+        yield();
 
         this->store_QPIGS(_result.c_str(), _now);       // Updates with direct reading from inverter
         //3 = debug msg
         SUPPORT_FUNCTIONS::logMsg(3,"After store_QPIGS");
+        yield();
         this->smoothing_QPIGS();                        // accumulates, average and updates QPIGS_average.
         //3 = debug msg
         SUPPORT_FUNCTIONS::logMsg(3,"After smoothing_QPIGS: _average_count: " + String(_average_count));
+        yield();
 
         
         // Ask Inverer for QPIRI configuration in the 10th QPIGS reading (0 to 9)
@@ -727,11 +708,13 @@ int PV_INVERTER::ask_data(uint32_t _now,  bool _CRChardcoded)
           // Reads QPIRI command to check battery configurations
           
           String _QPIRI_result;
-          this->ask_QPIRI(_QPIRI_result, _CRChardcoded);
+          yield();
+         this->ask_QPIRI(_QPIRI_result, _CRChardcoded);
           //3 = debug msg
           SUPPORT_FUNCTIONS::logMsg(3,"After ask_QPIRI");
   
           // store QPIRI info
+          yield();
           this->store_QPIRI(_QPIRI_result, _now);
           //3 = debug msg
           SUPPORT_FUNCTIONS::logMsg(3,"After store_QPIRI");
@@ -769,6 +752,7 @@ int PV_INVERTER::handle_automation(int _hour, int _min,  bool _CRChardcoded)
       //
       //  SET: SOLAR = Solar First (Solar, Utility and Battery) 
       /////////////////////////////////////////////////////////////////////
+      yield();
        
       if ((_begin_min < minutes) && (minutes < _evening_min))
       {

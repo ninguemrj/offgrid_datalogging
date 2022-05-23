@@ -1,4 +1,5 @@
 #include "config.h"
+#include "_secret.h"
 
 /////////////////////////////////
 // URGENT
@@ -91,8 +92,8 @@ struct tm timeinfo;
 
 
 //******* WIFI ************************************************
-    String ssid = "Ninguem_house";
-    String password = "a2a3a1982a";
+extern const char* ssid;
+extern const char* password;
 
 
 //***** SERIAL3 on MEGA for Solar Inverter communication *****************************
@@ -172,9 +173,11 @@ void setup() {
 
 void loop()
 {
-  
+  yield();
   SQL_inv.runLoop();
+  yield();
   WEB_inv.runLoop();
+  yield();
 
   
   int returned_code = 0;

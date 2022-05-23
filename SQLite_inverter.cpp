@@ -319,6 +319,7 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
 {
     /// Benchmark
     uint32_t oldtime = millis();
+    yield();
 
     //----- Prepared QPIGS INSERT SQL Statement ----------------
     String _QPIGS_line = "INSERT INTO 'QPIGS' VALUES (" +
@@ -361,6 +362,7 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
 
     // Run SQL Insert statement 
     rc = db_exec(db1, _QPIGS_line.c_str());
+    yield();
     if (rc != SQLITE_OK) 
     {
        Serial.println("--- ERROR: SQLITE: INSERT SQL Cmd error code: " + String(rc));
@@ -368,6 +370,7 @@ uint8_t SQLITE_INVERTER::sd_StoreQPIGS(PV_INVERTER::pipVals_t _thisPIP, bool _st
        
        return 1;
     }
+    yield();
     
     if (VERBOSE_MODE == 2) Serial.println("--- VERBOSE: SQLITE: information INSERTed in the database row: |" + String((long)sqlite3_last_insert_rowid(db1)) + "|END.");
     if (VERBOSE_MODE == 1) Serial.println("--- VERBOSE: SQLITE: MEM USED: |" + String((long)sqlite3_memory_used()) + "|END.");

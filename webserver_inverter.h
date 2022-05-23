@@ -35,7 +35,7 @@ class WEBSERVER_INVERTER
 
     WEBSERVER_INVERTER() {};
 
-    void begin(String _ssid, String _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV);
+    void begin(const char* _ssid, const char* _password, PV_INVERTER *_inv, SQLITE_INVERTER *_SQL_INV);
     void runLoop();
 
 
